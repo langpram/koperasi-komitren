@@ -60,7 +60,7 @@ export default function BerandaPage() {
   const [satuanOutput, setSatuanOutput] = useState("KG");
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
-  const receiptRef = useRef<HTMLDivElement>(null);
+  const receiptRef = useRef<HTMLDivElement>(null!);
   const [stokData, setStokData] = useState<StokItem[]>([]);
   const [tujuanCustomer, setTujuanCustomer] = useState("");
   const [customers, setCustomers] = useState<{ id: string; nama: string }[]>([]);
