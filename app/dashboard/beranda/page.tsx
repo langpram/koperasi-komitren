@@ -27,7 +27,7 @@ interface TransaksiItem {
   namaSupplier?: string;
   jumlah: number;
   satuan: string;
-  timestamp: unknown;
+  timestamp: any;
   user: string;
   tanggalMasuk?: string;
   hargaBeliSatuan?: number;
@@ -420,8 +420,12 @@ export default function BerandaPage() {
         
         // Urutkan dari yang terbaru
         const sorted = inputItems.sort((a, b) => {
-          const timeA = a.timestamp?.toMillis ? a.timestamp.toMillis() : 0;
-          const timeB = b.timestamp?.toMillis ? b.timestamp.toMillis() : 0;
+          const timeA = (a.timestamp && typeof a.timestamp === 'object' && 'toMillis' in a.timestamp) 
+            ? (a.timestamp as any).toMillis() 
+            : 0;
+          const timeB = (b.timestamp && typeof b.timestamp === 'object' && 'toMillis' in b.timestamp) 
+            ? (b.timestamp as any).toMillis() 
+            : 0;
           return timeB - timeA;
         });
         

@@ -24,7 +24,15 @@ export default function DashboardPage() {
     setUsername(storedUsername);
     setRole(storedRole);
 
-    if (!storedUsername) {
+    // Perketat: cek cookies browser juga selain localStorage
+    const cookies = document.cookie.split(";").reduce((acc: Record<string, string>, kv) => {
+      const [k, v] = kv.trim().split("=");
+      acc[k] = v ?? "";
+      return acc;
+    }, {});
+
+    const loggedIn = cookies["isLoggedIn"] === "true";
+    if (!storedUsername || !loggedIn) {
       router.push("/login");
     }
   }, [router]);

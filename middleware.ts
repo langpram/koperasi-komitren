@@ -1,19 +1,29 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const isLoggedIn = req.cookies.get("isLoggedIn")?.value;
-  const pathname = req.nextUrl.pathname;
+  const { nextUrl, cookies } = req;
+  const pathname = nextUrl.pathname;
 
-  const publicPaths = ["/login"];
+  // Proteksi semua route di bawah /dashboard
+  if (pathname.startsWith("/dashboard")) {
+    const loginTsStr = cookies.get("loginTs")?.value;
+    const loginTs = loginTsStr ? Number(loginTsStr) : 0;
 
-  if (!publicPaths.includes(pathname) && isLoggedIn !== "true") {
-    return NextResponse.redirect(new URL("/login", req.url));
+    const now = Date.now();
+    const AUTH_WINDOW_MS = 10_000; // wajib login dalam 10 detik terakhir
+
+    const validRecentLogin = loginTs > 0 && now - loginTs <= AUTH_WINDOW_MS;
+
+    if (!validRecentLogin) {
+      const loginUrl = new URL("/login", nextUrl);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/dashboard", "/dashboard/:path*"],
 };

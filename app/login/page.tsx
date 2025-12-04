@@ -50,11 +50,13 @@ export default function LoginPage() {
 
       const userData = snap.docs[0].data();
 
-      // Set cookies
-      document.cookie = "isLoggedIn=true; path=/; max-age=86400";
-      document.cookie = `cabang=${userData.cabang}; path=/; max-age=86400`;
-      document.cookie = `username=${userData.username}; path=/; max-age=86400`;
-      document.cookie = `role=${userData.role}; path=/; max-age=86400`;
+      // Set cookies: session-only + login timestamp
+      const loginTs = Date.now();
+      document.cookie = `isLoggedIn=true; path=/`;
+      document.cookie = `cabang=${userData.cabang}; path=/`;
+      document.cookie = `username=${userData.username}; path=/`;
+      document.cookie = `role=${userData.role}; path=/`;
+      document.cookie = `loginTs=${loginTs}; path=/`;
 
       // Simpan ke localStorage juga buat backup
       localStorage.setItem("cabang", userData.cabang);
