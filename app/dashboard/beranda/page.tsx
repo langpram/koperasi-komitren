@@ -420,12 +420,24 @@ export default function BerandaPage() {
         
         // Urutkan dari yang terbaru
         const sorted = inputItems.sort((a, b) => {
-          const timeA = (a.timestamp && typeof a.timestamp === 'object' && 'toMillis' in a.timestamp) 
-            ? (a.timestamp as any).toMillis() 
-            : 0;
-          const timeB = (b.timestamp && typeof b.timestamp === 'object' && 'toMillis' in b.timestamp) 
-            ? (b.timestamp as any).toMillis() 
-            : 0;
+          const timeA = (() => {
+            const t: any = a.timestamp;
+            if (!t) return 0;
+            if (typeof t === "number") return t;
+            if (t.toMillis && typeof t.toMillis === "function") return t.toMillis();
+            if (t.seconds && typeof t.seconds === "number") return t.seconds * 1000;
+            const d = t.toDate ? t.toDate() : t;
+            return d instanceof Date ? d.getTime() : 0;
+          })();
+          const timeB = (() => {
+            const t: any = b.timestamp;
+            if (!t) return 0;
+            if (typeof t === "number") return t;
+            if (t.toMillis && typeof t.toMillis === "function") return t.toMillis();
+            if (t.seconds && typeof t.seconds === "number") return t.seconds * 1000;
+            const d = t.toDate ? t.toDate() : t;
+            return d instanceof Date ? d.getTime() : 0;
+          })();
           return timeB - timeA;
         });
         
