@@ -69,11 +69,25 @@ export default function DataSupplierPage() {
       })) as Supplier[];
 
       // Sort by created date (newest first)
-      data.sort((a, b) => {
-        const aTime = a.createdAt?.toMillis() || 0;
-        const bTime = b.createdAt?.toMillis() || 0;
-        return bTime - aTime;
-      });
+      const getMillis = (t: any): number => {
+        if (!t) return 0;
+        if (typeof t === "number") return t;
+        if (typeof t === "object") {
+          const maybeFn = (t as any).toMillis;
+          if (typeof maybeFn === "function") {
+            try { return maybeFn.call(t); } catch { return 0; }
+          }
+          const seconds = (t as any).seconds;
+          if (typeof seconds === "number") return seconds * 1000;
+          if (t instanceof Date) return t.getTime();
+        }
+        if (typeof t === "string") {
+          const parsed = Date.parse(t);
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+        return 0;
+      };
+      data.sort((a, b) => getMillis(b.createdAt) - getMillis(a.createdAt));
 
       setSuppliers(data);
       setFilteredSuppliers(data);

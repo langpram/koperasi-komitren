@@ -419,27 +419,25 @@ export default function BerandaPage() {
         if (inputItems.length === 0) return { hargaBeli: 0, hargaJual: 0 };
         
         // Urutkan dari yang terbaru
-        const sorted = inputItems.sort((a, b) => {
-          const timeA = (() => {
-            const t: any = a.timestamp;
-            if (!t) return 0;
-            if (typeof t === "number") return t;
-            if (t.toMillis && typeof t.toMillis === "function") return t.toMillis();
-            if (t.seconds && typeof t.seconds === "number") return t.seconds * 1000;
-            const d = t.toDate ? t.toDate() : t;
-            return d instanceof Date ? d.getTime() : 0;
-          })();
-          const timeB = (() => {
-            const t: any = b.timestamp;
-            if (!t) return 0;
-            if (typeof t === "number") return t;
-            if (t.toMillis && typeof t.toMillis === "function") return t.toMillis();
-            if (t.seconds && typeof t.seconds === "number") return t.seconds * 1000;
-            const d = t.toDate ? t.toDate() : t;
-            return d instanceof Date ? d.getTime() : 0;
-          })();
-          return timeB - timeA;
-        });
+        const getMillis = (t: any): number => {
+          if (!t) return 0;
+          if (typeof t === "number") return t;
+          if (typeof t === "object") {
+            const maybeFn = (t as any).toMillis;
+            if (typeof maybeFn === "function") {
+              try { return maybeFn.call(t); } catch { return 0; }
+            }
+            const seconds = (t as any).seconds;
+            if (typeof seconds === "number") return seconds * 1000;
+            if (t instanceof Date) return t.getTime();
+          }
+          if (typeof t === "string") {
+            const parsed = Date.parse(t);
+            return Number.isFinite(parsed) ? parsed : 0;
+          }
+          return 0;
+        };
+        const sorted = inputItems.sort((a, b) => getMillis(b.timestamp) - getMillis(a.timestamp));
         
         return {
           hargaBeli: sorted[0].hargaBeliSatuan || 0,
