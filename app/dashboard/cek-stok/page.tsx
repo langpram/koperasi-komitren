@@ -526,7 +526,7 @@ export default function CekStokPage() {
           onClick={closeModal}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 transform transition-all"
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 transform transition-all"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">

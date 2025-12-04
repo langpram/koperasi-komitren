@@ -19,7 +19,7 @@ interface ReceiptData {
 
 interface Props {
   receiptData: ReceiptData;
-  receiptRef: RefObject<HTMLDivElement | null>;
+  receiptRef: RefObject<HTMLDivElement>;
   tujuanCustomer?: string;
   onPrint: () => void;
   onClose: () => void;
