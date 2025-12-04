@@ -475,7 +475,7 @@ export default function DataCustomerPage() {
           onClick={closeModal}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8"
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
