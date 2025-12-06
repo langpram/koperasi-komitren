@@ -55,7 +55,7 @@ export default function Sidebar({
       {/* Header Sidebar */}
       <div className="p-6 border-b">
         <h1 className="text-xl font-bold text-gray-800">Koperasi System</h1>
-        <p className="text-sm text-gray-500 mt-1">{formatCabang(cabang)}</p>
+        <p className="text-sm text-gray-500 mt-1 capitalize">{formatCabang(cabang)}</p>
       </div>
 
       {/* Menu Items */}
