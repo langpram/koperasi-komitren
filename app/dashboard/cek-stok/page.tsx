@@ -208,12 +208,23 @@ export default function CekStokPage() {
     data.forEach((t) => {
       const name = t.namaProduk.toUpperCase();
       if (!byProduk[name]) {
-        byProduk[name] = { namaProduk: name, satuan: t.satuan || "", qtyIn: 0, qtyOut: 0, costSum: 0, revenueSum: 0 };
+        byProduk[name] = {
+          namaProduk: name,
+          satuan: t.satuan || "",
+          qtyIn: 0,
+          qtyOut: 0,
+          costSum: 0,
+          revenueSum: 0,
+          suppliers: new Set(),
+        };
       }
       if (t.type === "input") {
         byProduk[name].qtyIn += t.jumlah;
         const hb = typeof t.hargaBeliSatuan === "number" ? t.hargaBeliSatuan : 0;
         byProduk[name].costSum += (t.jumlah || 0) * hb;
+        if (t.namaSupplier) {
+          byProduk[name].suppliers.add(t.namaSupplier);
+        }
       } else if (t.type === "output") {
         byProduk[name].qtyOut += t.jumlah;
         const hj = typeof t.hargaJualSatuan === "number" ? t.hargaJualSatuan : (productPrices[name] || 0);
@@ -221,37 +232,48 @@ export default function CekStokPage() {
       }
       byProduk[name].satuan = t.satuan || byProduk[name].satuan;
     });
+
     const rows = Object.values(byProduk).map((p: any, idx) => {
-      const avgHB = p.qtyIn > 0 ? p.costSum / p.qtyIn : 0;
-      const profit = p.revenueSum - p.costSum;
+      const hargaBeli = p.qtyIn > 0 ? p.costSum / p.qtyIn : 0;
+      const hargaJual = productPrices[p.namaProduk] || 0;
+      const totalHargaBeli = p.qtyIn * hargaBeli;
+      const totalHargaJual = p.qtyIn * hargaJual;
+      const selisihHarga = hargaJual - hargaBeli;
+      const selisihTotal = totalHargaJual - totalHargaBeli;
+      const persentaseKeuntungan = totalHargaJual > 0 ? (selisihTotal / totalHargaJual) * 100 : 0;
+
       return {
-        No: idx + 1,
-        Produk: p.namaProduk,
-        "Qty IN": p.qtyIn,
-        "Qty OUT": p.qtyOut,
-        Satuan: p.satuan,
-        "HB Rata2": Math.round(avgHB),
-        "Total HPP": Math.round(p.costSum),
-        "Total Penjualan": Math.round(p.revenueSum),
-        "Laba Kotor": Math.round(profit),
+        "NAMA PRODUK": p.namaProduk,
+        "SUPLIER": Array.from(p.suppliers).join(", "),
+        "QTY IN": p.qtyIn,
+        "QTY OUT": p.qtyOut,
+        "HARGA BELI DARI SUPPLIER": Math.round(hargaBeli),
+        "HARGA JUAL": Math.round(hargaJual),
+        "TOTAL HARGA BELI": Math.round(totalHargaBeli),
+        "TOTAL HARGA JUAL": Math.round(totalHargaJual),
+        "SELISIH HARGA": Math.round(selisihHarga),
+        "SELISIH TOTAL": Math.round(selisihTotal),
+        "PRESENTASE KEUNTUNGAN": `${persentaseKeuntungan.toFixed(2)}%`,
       };
     });
+
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Laporan Bulanan");
     ws["!cols"] = [
-      { wch: 5 },
-      { wch: 25 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 14 },
-      { wch: 16 },
-      { wch: 14 },
+      { wch: 25 }, // NAMA PRODUK
+      { wch: 30 }, // SUPLIER
+      { wch: 10 }, // QTY IN
+      { wch: 10 }, // QTY OUT
+      { wch: 25 }, // HARGA BELI DARI SUPPLIER
+      { wch: 15 }, // HARGA JUAL
+      { wch: 20 }, // TOTAL HARGA BELI
+      { wch: 20 }, // TOTAL HARGA JUAL
+      { wch: 15 }, // SELISIH HARGA
+      { wch: 15 }, // SELISIH TOTAL
+      { wch: 25 }, // PRESENTASE KEUNTUNGAN
     ];
-    const fileName = `Laporan_Bulanan_${cabang}_${year}-${String(month).padStart(2, "0")}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+    XLSX.writeFile(wb, `Laporan Bulanan - ${new Date().toLocaleString("id-ID", { month: "long", year: "numeric" })}.xlsx`);
   };
 
   const exportSupplierKategori = () => {
