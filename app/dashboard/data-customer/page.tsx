@@ -11,6 +11,8 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  getDocs,
+  where,
 } from "firebase/firestore";
 import * as XLSX from "xlsx";
 
@@ -52,6 +54,8 @@ export default function DataCustomerPage() {
     produkDibutuhkan: "",
     catatan: "",
   });
+  // Prevent double submit
+  const [isSaving, setIsSaving] = useState(false);
 
   // Delete confirmation
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -149,27 +153,78 @@ export default function DataCustomerPage() {
     }
 
     try {
+      setIsSaving(true);
+      const normalizedNama = (formData.nama || "").trim().toUpperCase();
+      const originalNama = (formData.nama || "").trim();
+      const dataToSave = {
+        nama: normalizedNama,
+        alamat: (formData.alamat || "").trim().toUpperCase(),
+        noTelepon: (formData.noTelepon || "").toString().trim(),
+        produkDibutuhkan: (formData.produkDibutuhkan || "").trim().toUpperCase(),
+        catatan: (formData.catatan || "").trim(),
+      };
+
       if (modalMode === "add") {
-        // Add new customer
+        // Cek duplikasi berdasarkan nama uppercase dan fallback nama asli (untuk data lama)
+        const dupQueryUpper = query(
+          collection(db, "cabang", cabang, "customers"),
+          where("nama", "==", normalizedNama)
+        );
+        const dupSnapUpper = await getDocs(dupQueryUpper);
+        let isDup = !dupSnapUpper.empty;
+        if (!isDup) {
+          const dupQueryRaw = query(
+            collection(db, "cabang", cabang, "customers"),
+            where("nama", "==", originalNama)
+          );
+          const dupSnapRaw = await getDocs(dupQueryRaw);
+          isDup = !dupSnapRaw.empty;
+        }
+        if (isDup) {
+          alert("❗ Customer dengan nama tersebut sudah ada. Silakan gunakan menu Edit.");
+          setIsSaving(false);
+          return;
+        }
         await addDoc(collection(db, "cabang", cabang, "customers"), {
-          ...formData,
+          ...dataToSave,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
         alert("✅ Customer berhasil ditambahkan!");
       } else {
-        // Update existing customer
+        // Update existing customer dengan cek duplikasi jika mengubah nama
         if (selectedCustomer) {
+          const dupQueryUpper = query(
+            collection(db, "cabang", cabang, "customers"),
+            where("nama", "==", normalizedNama)
+          );
+          const dupSnapUpper = await getDocs(dupQueryUpper);
+          let hasOther = dupSnapUpper.docs.some((d) => d.id !== selectedCustomer.id);
+          if (!hasOther) {
+            const dupQueryRaw = query(
+              collection(db, "cabang", cabang, "customers"),
+              where("nama", "==", originalNama)
+            );
+            const dupSnapRaw = await getDocs(dupQueryRaw);
+            hasOther = dupSnapRaw.docs.some((d) => d.id !== selectedCustomer.id);
+          }
+          if (hasOther) {
+            alert("❗ Nama customer sudah digunakan oleh entri lain.");
+            setIsSaving(false);
+            return;
+          }
           await updateDoc(doc(db, "cabang", cabang, "customers", selectedCustomer.id), {
-            ...formData,
+            ...dataToSave,
             updatedAt: serverTimestamp(),
           });
           alert("✅ Customer berhasil diupdate!");
         }
       }
+      setIsSaving(false);
       closeModal();
     } catch (error) {
       console.error("Error saving customer:", error);
+      setIsSaving(false);
       alert("❌ Gagal menyimpan data customer!");
     }
   };
@@ -338,7 +393,7 @@ export default function DataCustomerPage() {
               placeholder="🔍 Cari customer..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-5 py-3 rounded-xl text-gray-800 font-medium outline-none focus:ring-4 focus:ring-teal-300 transition"
+              className="w-full px-5 py-3 rounded-xl text-black font-medium outline-none focus:ring-4 focus:ring-teal-300 transition"
             />
           </div>
 
@@ -478,68 +533,68 @@ export default function DataCustomerPage() {
             className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <h3 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
               <span className="text-3xl">{modalMode === "add" ? "➕" : "✏️"}</span>
               {modalMode === "add" ? "Tambah Customer Baru" : "Edit Customer"}
             </h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-black mb-2">
                   Nama Customer <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value.toUpperCase() })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 outline-none transition uppercase"
+                  className="w-full px-4 py-3 border-2 border-black rounded-xl focus:border-purple-500 outline-none transition text-black uppercase"
                   placeholder="Masukkan nama customer..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Alamat</label>
+                <label className="block text-sm font-bold text-black mb-2">Alamat</label>
                 <textarea
                   value={formData.alamat}
                   onChange={(e) => setFormData({ ...formData, alamat: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 outline-none transition"
+                  className="w-full px-4 py-3 border-2 border-black rounded-xl focus:border-purple-500 outline-none transition text-black"
                   placeholder="Masukkan alamat lengkap..."
                   rows={3}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-black mb-2">
                   No Telepon <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.noTelepon}
                   onChange={(e) => setFormData({ ...formData, noTelepon: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 outline-none transition"
+                  className="w-full px-4 py-3 border-2 border-black rounded-xl focus:border-purple-500 outline-none transition text-black"
                   placeholder="08xxxxxxxxxx"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-black mb-2">
                   Produk Dibutuhkan
                 </label>
                 <input
                   type="text"
                   value={formData.produkDibutuhkan}
                   onChange={(e) => setFormData({ ...formData, produkDibutuhkan: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 outline-none transition"
+                  className="w-full px-4 py-3 border-2 border-black rounded-xl focus:border-purple-500 outline-none transition text-black"
                   placeholder="Contoh: Telur, Sayuran, Daging"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Catatan</label>
+                <label className="block text-sm font-bold text-black mb-2">Catatan</label>
                 <textarea
                   value={formData.catatan}
                   onChange={(e) => setFormData({ ...formData, catatan: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 outline-none transition"
+                  className="w-full px-4 py-3 border-2 border-black rounded-xl focus:border-purple-500 outline-none transition text-black"
                   placeholder="Catatan tambahan (opsional)..."
                   rows={2}
                 />
@@ -548,13 +603,14 @@ export default function DataCustomerPage() {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleSubmit}
-                  className="flex-1 bg-teal-500 hover:bg-teal-600 text-white py-3 rounded-xl font-bold transition"
+                  disabled={isSaving}
+                  className="flex-1 bg-purple-500 hover:bg-purple-600 disabled:opacity-60 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold transition"
                 >
-                  💾 Simpan
+                  {isSaving ? "⏳ Menyimpan..." : "💾 Simpan"}
                 </button>
                 <button
                   onClick={closeModal}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-xl font-bold transition"
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-black py-3 rounded-xl font-bold transition"
                 >
                   ❌ Batal
                 </button>

@@ -27,6 +27,22 @@ interface TransaksiItem {
   hargaJualSatuan?: number;
 }
 
+// Tambah nama bulan untuk dropdown laporan bulanan
+const monthNames: string[] = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
 export default function CekStokPage() {
   const [cabang, setCabang] = useState("");
   const [stokData, setStokData] = useState<StokItem[]>([]);
@@ -430,24 +446,30 @@ export default function CekStokPage() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <select
-              value={month}
-              onChange={(e) => setMonth(parseInt(e.target.value))}
-              className="flex-1 px-4 py-3 rounded-xl text-blue-600 font-bold bg-white hover:bg-blue-50 transition"
-            >
-              {[...Array(12)].map((_, i) => (
-                <option key={i + 1} value={i + 1}>{String(i + 1).padStart(2, "0")}</option>
-              ))}
-            </select>
-            <select
-              value={year}
-              onChange={(e) => setYear(parseInt(e.target.value))}
-              className="flex-1 px-4 py-3 rounded-xl text-blue-600 font-bold bg-white hover:bg-blue-50 transition"
-            >
-              {Array.from({ length: 6 }, (_, k) => new Date().getFullYear() - 3 + k).map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-white/90 mb-1">Bulan</label>
+              <select
+                value={month}
+                onChange={(e) => setMonth(parseInt(e.target.value))}
+                className="w-full px-4 py-3 rounded-xl text-blue-700 font-bold bg-white border-2 border-blue-200 focus:ring-4 focus:ring-blue-200 focus:border-blue-500 outline-none transition shadow-sm appearance-none cursor-pointer"
+              >
+                {monthNames.map((name, i) => (
+                  <option key={i + 1} value={i + 1}>{name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-white/90 mb-1">Tahun</label>
+              <select
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value))}
+                className="w-full px-4 py-3 rounded-xl text-blue-700 font-bold bg-white border-2 border-blue-200 focus:ring-4 focus:ring-blue-200 focus:border-blue-500 outline-none transition shadow-sm appearance-none cursor-pointer"
+              >
+                {Array.from({ length: 6 }, (_, k) => new Date().getFullYear() - 3 + k).map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="flex gap-2">
             <button

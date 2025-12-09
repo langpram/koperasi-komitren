@@ -71,6 +71,7 @@ export default function BerandaPage() {
   const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState<string[]>([]);
+  const [recommendedProducts, setRecommendedProducts] = useState<string[]>([]);
 
   // Riwayat
   const [riwayat, setRiwayat] = useState<TransaksiItem[]>([]);
@@ -188,14 +189,35 @@ export default function BerandaPage() {
       );
       setFilteredSuppliers(filtered);
       setShowSupplierDropdown(true);
+      // Jika ada supplier yang namanya cocok persis, siapkan rekomendasi produk
+      const normalized = value.trim().toUpperCase();
+      const exact = suppliers.find((s) => (s.nama || "").toUpperCase() === normalized);
+      if (exact) {
+        try {
+          const recs = computeRecommendedProducts(exact);
+          setRecommendedProducts(recs);
+        } catch {}
+      } else {
+        setRecommendedProducts([]);
+      }
     } else {
       setShowSupplierDropdown(false);
+      setRecommendedProducts([]);
     }
   };
 
   const selectSupplier = (supplier: any) => {
     setNamaSupplier(supplier.nama);
     setShowSupplierDropdown(false);
+    // Hitung rekomendasi produk berdasarkan jenis barang supplier
+    try {
+      const recs = computeRecommendedProducts(supplier);
+      setRecommendedProducts(recs);
+      // Jika belum ada nama produk, isi dengan rekomendasi pertama
+      if (!namaProduk && recs.length > 0) {
+        setNamaProduk(recs[0]);
+      }
+    } catch {}
   };
 
   const getProductOptions = (): string[] => {
@@ -224,31 +246,49 @@ export default function BerandaPage() {
     setShowProductDropdown(false);
   };
 
+  // Buat rekomendasi produk dari "jenisBarang" di data supplier
+  const computeRecommendedProducts = (supplier: any): string[] => {
+    const jenis = (supplier?.jenisBarang || "").toString().toUpperCase();
+    const tokens: string[] = jenis
+      .split(/[\,\n]/)
+      .map((t: string) => t.trim())
+      .filter((t: string) => Boolean(t));
+    const options = getProductOptions();
+    if (tokens.length === 0) return [];
+    // Prioritaskan produk yang mengandung token sebagai kata
+    const matches = options.filter((name) => {
+      return tokens.some((tok: string) => name.includes(tok));
+    });
+    // Unik + urut alfabet
+    return Array.from(new Set(matches)).sort((a, b) => a.localeCompare(b));
+  };
+
   // FUNGSI BARU: Cek & Auto-Add Supplier
   const checkAndAddSupplier = async (supplierName: string) => {
     try {
-      // Cek apakah supplier sudah ada di database
+      const normalized = (supplierName || "").trim().toUpperCase();
+      // Cek apakah supplier sudah ada di database (case-insensitive via uppercase)
       const supplierQuery = query(
         collection(db, "cabang", cabang, "suppliers"),
-        where("nama", "==", supplierName)
+        where("nama", "==", normalized)
       );
-      
       const supplierSnapshot = await getDocs(supplierQuery);
 
-      // Kalo belum ada, tambahkan supplier baru
+      // Kalo belum ada, tambahkan supplier baru (nama disimpan uppercase)
       if (supplierSnapshot.empty) {
         await addDoc(collection(db, "cabang", cabang, "suppliers"), {
-          nama: supplierName,
-          kontak: "-", // Default kosong, bisa diisi nanti di Data Supplier
-          alamat: "-",
-          timestamp: serverTimestamp(),
+          nama: normalized,
+          kontak: ("-") as any, // Default kosong, bisa diisi nanti di Data Supplier
+          alamat: ("-") as any,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
           addedBy: username,
         });
 
         // Reload suppliers biar muncul di autocomplete
         await loadSuppliers(cabang);
 
-        setSuccess(`✅ Supplier "${supplierName}" berhasil ditambahkan!`);
+        setSuccess(`✅ Supplier "${normalized}" berhasil ditambahkan!`);
         setTimeout(() => setSuccess(""), 3000);
       }
     } catch (e: any) {
@@ -259,11 +299,23 @@ export default function BerandaPage() {
 
   const updateSupplierPrices = async (supplierName: string, beli: number) => {
     try {
-      const supplierQuery = query(
+      const normalized = (supplierName || "").trim().toUpperCase();
+      // Coba cari berdasarkan nama uppercase terlebih dahulu
+      let supplierQueryRef = query(
         collection(db, "cabang", cabang, "suppliers"),
-        where("nama", "==", supplierName)
+        where("nama", "==", normalized)
       );
-      const supplierSnapshot = await getDocs(supplierQuery);
+      let supplierSnapshot = await getDocs(supplierQueryRef);
+
+      // Fallback: jika tidak ketemu, coba nama asli (untuk data lama yang belum dinormalisasi)
+      if (supplierSnapshot.empty && supplierName) {
+        supplierQueryRef = query(
+          collection(db, "cabang", cabang, "suppliers"),
+          where("nama", "==", supplierName)
+        );
+        supplierSnapshot = await getDocs(supplierQueryRef);
+      }
+
       const updates = supplierSnapshot.docs.map((d) =>
         updateDoc(d.ref, {
           hargaBeliSatuan: beli,
@@ -491,31 +543,45 @@ export default function BerandaPage() {
     const printContent = receiptRef.current;
     if (!printContent) return;
 
-    const windowPrint = window.open("", "", "width=800,height=600");
-    windowPrint?.document.write(`
+    const popup = window.open("", "", "width=800,height=600");
+    if (!popup) {
+      alert("Popup print diblokir oleh browser. Mohon izinkan pop-up untuk situs ini.");
+      return;
+    }
+
+    // Tulis konten struk ke window baru
+    popup.document.open();
+    popup.document.write(`
+      <!doctype html>
       <html>
         <head>
+          <meta charset="utf-8" />
           <title>Struk Output Barang</title>
-          <style>
-            body { font-family: 'Courier New', monospace; padding: 20px; }
-            .receipt { max-width: 300px; margin: 0 auto; }
-            .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
-            .item { display: flex; justify-content: space-between; margin: 5px 0; }
-            .footer { border-top: 2px dashed #000; padding-top: 10px; margin-top: 10px; text-align: center; }
-            @media print {
-              body { margin: 0; padding: 10px; }
-            }
-          </style>
         </head>
         <body>
           ${printContent.innerHTML}
         </body>
       </html>
     `);
-    windowPrint?.document.close();
-    windowPrint?.focus();
-    windowPrint?.print();
-    windowPrint?.close();
+    popup.document.close();
+
+    // Tunggu sampai konten selesai di-render, baru panggil print
+    const doPrint = () => {
+      try {
+        popup.focus();
+        popup.print();
+      } catch (e) {
+        console.error("Gagal memanggil print:", e);
+      } finally {
+        try { popup.close(); } catch {}
+        // Tutup modal struk setelah print agar tidak menghalangi interaksi
+        setShowReceipt(false);
+      }
+    };
+
+    // Jika 'load' tidak terpanggil, fallback dengan sedikit delay
+    popup.addEventListener("load", () => setTimeout(doPrint, 50));
+    setTimeout(doPrint, 500);
   };
 
   const formatDate = (timestamp: any) => {
@@ -592,26 +658,42 @@ export default function BerandaPage() {
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
                   Nama Produk <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Telur Ayam"
-                  value={namaProduk}
-                  onChange={(e) => handleProdukChange(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-black uppercase"
-                />
-                {showProductDropdown && filteredProducts.length > 0 && (
-                  <div className="mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-                    {filteredProducts.map((name) => (
+              <input
+                type="text"
+                placeholder="Contoh: Telur Ayam"
+                value={namaProduk}
+                onChange={(e) => handleProdukChange(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-black uppercase"
+              />
+              {recommendedProducts.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-xs font-semibold text-gray-600 mb-2">Rekomendasi dari supplier</div>
+                  <div className="flex flex-wrap gap-2">
+                    {recommendedProducts.slice(0, 10).map((name) => (
                       <button
                         key={name}
                         onClick={() => selectProduk(name)}
-                        className="w-full px-4 py-3 text-left hover:bg-blue-50 transition text-gray-800 font-medium border-b border-gray-100 last:border-0"
+                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition"
                       >
                         {name}
                       </button>
                     ))}
                   </div>
-                )}
+                </div>
+              )}
+              {showProductDropdown && filteredProducts.length > 0 && (
+                <div className="mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                  {filteredProducts.map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => selectProduk(name)}
+                      className="w-full px-4 py-3 text-left hover:bg-blue-50 transition text-gray-800 font-medium border-b border-gray-100 last:border-0"
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              )}
               </div>
 
               <div className="relative">

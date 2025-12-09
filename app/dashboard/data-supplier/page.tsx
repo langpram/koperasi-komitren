@@ -11,6 +11,8 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  getDocs,
+  where,
 } from "firebase/firestore";
 import * as XLSX from "xlsx";
 
@@ -52,6 +54,8 @@ export default function DataSupplierPage() {
     jenisBarang: "",
     maksimumPengiriman: "",
   });
+  // Prevent double submit
+  const [isSaving, setIsSaving] = useState(false);
 
   // Delete confirmation
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -160,17 +164,38 @@ export default function DataSupplierPage() {
     }
 
     try {
-      // Convert semua ke UPPERCASE untuk menghindari duplikasi
+      setIsSaving(true);
+      const normalizedNama = (formData.nama || "").trim().toUpperCase();
+      const originalNama = (formData.nama || "").trim();
       const dataToSave = {
-        nama: formData.nama.toUpperCase(),
+        nama: normalizedNama,
         kontak: formData.kontak,
-        alamat: formData.alamat.toUpperCase(),
-        jenisBarang: formData.jenisBarang.toUpperCase(),
-        maksimumPengiriman: formData.maksimumPengiriman.toUpperCase(),
+        alamat: (formData.alamat || "").trim().toUpperCase(),
+        jenisBarang: (formData.jenisBarang || "").trim().toUpperCase(),
+        maksimumPengiriman: (formData.maksimumPengiriman || "").trim().toUpperCase(),
       };
 
       if (modalMode === "add") {
-        // Add new supplier
+        // Cek duplikasi berdasarkan nama uppercase dan fallback nama asli (untuk data lama)
+        const dupQueryUpper = query(
+          collection(db, "cabang", cabang, "suppliers"),
+          where("nama", "==", normalizedNama)
+        );
+        const dupSnapUpper = await getDocs(dupQueryUpper);
+        let isDup = !dupSnapUpper.empty;
+        if (!isDup) {
+          const dupQueryRaw = query(
+            collection(db, "cabang", cabang, "suppliers"),
+            where("nama", "==", originalNama)
+          );
+          const dupSnapRaw = await getDocs(dupQueryRaw);
+          isDup = !dupSnapRaw.empty;
+        }
+        if (isDup) {
+          alert("❗ Supplier dengan nama tersebut sudah ada. Silakan gunakan menu Edit.");
+          setIsSaving(false);
+          return;
+        }
         await addDoc(collection(db, "cabang", cabang, "suppliers"), {
           ...dataToSave,
           createdAt: serverTimestamp(),
@@ -178,8 +203,27 @@ export default function DataSupplierPage() {
         });
         alert("✅ Supplier berhasil ditambahkan!");
       } else {
-        // Update existing supplier
+        // Update existing supplier dengan cek duplikasi jika mengubah nama
         if (selectedSupplier) {
+          const dupQueryUpper = query(
+            collection(db, "cabang", cabang, "suppliers"),
+            where("nama", "==", normalizedNama)
+          );
+          const dupSnapUpper = await getDocs(dupQueryUpper);
+          let hasOther = dupSnapUpper.docs.some((d) => d.id !== selectedSupplier.id);
+          if (!hasOther) {
+            const dupQueryRaw = query(
+              collection(db, "cabang", cabang, "suppliers"),
+              where("nama", "==", originalNama)
+            );
+            const dupSnapRaw = await getDocs(dupQueryRaw);
+            hasOther = dupSnapRaw.docs.some((d) => d.id !== selectedSupplier.id);
+          }
+          if (hasOther) {
+            alert("❗ Nama supplier sudah digunakan oleh entri lain.");
+            setIsSaving(false);
+            return;
+          }
           await updateDoc(doc(db, "cabang", cabang, "suppliers", selectedSupplier.id), {
             ...dataToSave,
             updatedAt: serverTimestamp(),
@@ -187,9 +231,11 @@ export default function DataSupplierPage() {
           alert("✅ Supplier berhasil diupdate!");
         }
       }
+      setIsSaving(false);
       closeModal();
     } catch (error) {
       console.error("Error saving supplier:", error);
+      setIsSaving(false);
       alert("❌ Gagal menyimpan data supplier!");
     }
   };
@@ -572,9 +618,10 @@ export default function DataSupplierPage() {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleSubmit}
-                  className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 rounded-xl font-bold transition"
+                  disabled={isSaving}
+                  className="flex-1 bg-purple-500 hover:bg-purple-600 disabled:opacity-60 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold transition"
                 >
-                  💾 Simpan
+                  {isSaving ? "⏳ Menyimpan..." : "💾 Simpan"}
                 </button>
                 <button
                   onClick={closeModal}
