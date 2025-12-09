@@ -770,21 +770,3 @@ export default function CekStokPage() {
     </div>
   );
 }
-
-
-// Hitung rata-rata harga beli dari supplier-supplier yang pernah menyuplai produk ini (mengambil harga beli terakhir per supplier, lalu dirata-rata)
-const getAverageHargaBeliSemuaSupplier = (productName: string) => {
-const upper = productName.toUpperCase();
-const supplierSet = new Set<string>();
-transaksiList.forEach((t) => {
-if (t.type === "input" && t.namaProduk?.toUpperCase() === upper && t.namaSupplier) {
-supplierSet.add(t.namaSupplier);
-}
-});
-const latestPerSupplier = Array.from(supplierSet)
-.map((sup) => getLatestHargaBeli(productName, sup) || 0)
-.filter((val) => val > 0);
-if (latestPerSupplier.length === 0) return 0;
-const avg = latestPerSupplier.reduce((sum, v) => sum + v, 0) / latestPerSupplier.length;
-return avg;
-};
