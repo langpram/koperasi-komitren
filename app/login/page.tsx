@@ -176,7 +176,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-6 text-center text-sm text-gray-500">
-            © 2024 Koperasi. All rights reserved.
+            © 2025 Koperasi. All rights reserved.
           </div>
         </div>
       </div>
