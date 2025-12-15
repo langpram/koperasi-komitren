@@ -64,7 +64,7 @@ export default function LoginPage() {
       localStorage.setItem("role", userData.role);
 
       setSuccess("Login berhasil! Redirecting...");
-      
+
       setTimeout(() => {
         router.push("/dashboard");
       }, 1000);
@@ -80,8 +80,18 @@ export default function LoginPage() {
       {/* Toast Error */}
       {error && (
         <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-slide-in">
-          <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg
+            className="w-6 h-6 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
           <span className="font-medium">{error}</span>
         </div>
@@ -90,8 +100,18 @@ export default function LoginPage() {
       {/* Toast Success */}
       {success && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-slide-in">
-          <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          <svg
+            className="w-6 h-6 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 13l4 4L19 7"
+            />
           </svg>
           <span className="font-medium">{success}</span>
         </div>
@@ -101,20 +121,26 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-lg p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
-              </svg>
+            <div className="w-28 h-28 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg ring-2 ring-blue-50">
+              <img
+                src="https://res.cloudinary.com/doepilwju/image/upload/v1765505991/hjs_otvbvc.png"
+                alt="Logo Koperasi"
+                className="w-24 h-24 object-contain"
+              />
             </div>
             <h1 className="text-2xl font-bold text-gray-800">Login Koperasi</h1>
-            <p className="text-gray-500 text-sm mt-2">Silakan masuk ke akun Anda</p>
+            <p className="text-gray-500 text-sm mt-2">
+              Silakan masuk ke akun Anda
+            </p>
           </div>
 
           {/* Form */}
           <div className="space-y-5">
             {/* Username */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Username
+              </label>
               <input
                 type="text"
                 placeholder="Masukkan username"
@@ -126,7 +152,9 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
               <input
                 type="password"
                 placeholder="Masukkan password"
@@ -147,7 +175,9 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="mt-6 text-center text-sm text-gray-500">© 2024 Koperasi. All rights reserved.</div>
+          <div className="mt-6 text-center text-sm text-gray-500">
+            © 2024 Koperasi. All rights reserved.
+          </div>
         </div>
       </div>
 

@@ -25,14 +25,25 @@ interface Props {
   onClose: () => void;
 }
 
-export default function Receipt({ receiptData, receiptRef, tujuanCustomer, onPrint, onClose }: Props) {
-  const total = receiptData.items.reduce((acc, i) => acc + i.jumlah * i.hargaSatuan, 0);
-  
+export default function Receipt({
+  receiptData,
+  receiptRef,
+  tujuanCustomer,
+  onPrint,
+  onClose,
+}: Props) {
+  const total = receiptData.items.reduce(
+    (acc, i) => acc + i.jumlah * i.hargaSatuan,
+    0
+  );
+
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100">
+      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
         <div ref={receiptRef} className="bg-white">
-          <style dangerouslySetInnerHTML={{__html: `
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
             /* Screen Preview Styles - Supaya keliatan di layar */
             .print-area {
               color: #000;
@@ -167,38 +178,70 @@ export default function Receipt({ receiptData, receiptRef, tujuanCustomer, onPri
                 font-size: 9px;
                 color: #666;
               }
+              /* Ensure on-screen scroll doesn't crop print output */
+              .receipt-items {
+                max-height: none !important;
+                overflow: visible !important;
+              }
             }
-          `}} />
-          
+          `,
+            }}
+          />
+
           <div className="print-area">
             {/* Header */}
             <div className="print-header">
               <div className="print-title">KOPERASI</div>
               <div className="print-branch">{receiptData.cabang}</div>
               <div className="print-meta">
-                <div style={{fontWeight: 700, fontSize: '11px', marginBottom: '5px'}}>OUTPUT BARANG</div>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: "11px",
+                    marginBottom: "5px",
+                  }}
+                >
+                  OUTPUT BARANG
+                </div>
                 <div>No. {receiptData.noStruk}</div>
-                <div>{new Date(receiptData.timestamp).toLocaleString("id-ID", { 
-                  day: "2-digit", 
-                  month: "short", 
-                  year: "numeric", 
-                  hour: "2-digit", 
-                  minute: "2-digit" 
-                })}</div>
+                <div>
+                  {new Date(receiptData.timestamp).toLocaleString("id-ID", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
                 {tujuanCustomer && (
-                  <div style={{marginTop: '6px', fontWeight: 700}}>Tujuan: {tujuanCustomer}</div>
+                  <div style={{ marginTop: "6px", fontWeight: 700 }}>
+                    Tujuan: {tujuanCustomer}
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Items */}
-            <div style={{marginTop: '12px'}}>
+            <div
+              className="receipt-items"
+              style={{
+                marginTop: "12px",
+                maxHeight: "48vh",
+                overflowY: "auto",
+              }}
+            >
               {receiptData.items.map((item, idx) => (
                 <div key={idx} className="print-item">
                   <div className="print-item-name">{item.namaProduk}</div>
                   <div className="print-item-details">
-                    <span>{item.jumlah} {item.satuan} × Rp {item.hargaSatuan.toLocaleString("id-ID")}</span>
-                    <span className="print-item-price">Rp {(item.jumlah * item.hargaSatuan).toLocaleString("id-ID")}</span>
+                    <span>
+                      {item.jumlah} {item.satuan} × Rp{" "}
+                      {item.hargaSatuan.toLocaleString("id-ID")}
+                    </span>
+                    <span className="print-item-price">
+                      Rp{" "}
+                      {(item.jumlah * item.hargaSatuan).toLocaleString("id-ID")}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -212,7 +255,9 @@ export default function Receipt({ receiptData, receiptRef, tujuanCustomer, onPri
               </div>
               <div className="print-grand-total">
                 <span className="print-grand-total-label">TOTAL</span>
-                <span className="print-grand-total-amount">Rp {total.toLocaleString("id-ID")}</span>
+                <span className="print-grand-total-amount">
+                  Rp {total.toLocaleString("id-ID")}
+                </span>
               </div>
             </div>
 
@@ -244,21 +289,23 @@ export default function Receipt({ receiptData, receiptRef, tujuanCustomer, onPri
             </div>
             <div className="flex justify-between items-center bg-white rounded-xl p-3 shadow-sm">
               <span className="font-bold text-base">TOTAL</span>
-              <span className="font-black text-lg text-blue-600">Rp {total.toLocaleString("id-ID")}</span>
+              <span className="font-black text-lg text-blue-600">
+                Rp {total.toLocaleString("id-ID")}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Buttons */}
         <div className="flex gap-3 no-print">
-          <button 
-            onClick={onPrint} 
+          <button
+            onClick={onPrint}
             className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3 rounded-2xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
           >
             🖨️ Print Struk
           </button>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="flex-1 bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-2xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
           >
             Tutup

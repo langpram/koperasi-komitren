@@ -3,9 +3,20 @@
 
 import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, where, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  getDocs,
+  where,
+  updateDoc,
+} from "firebase/firestore";
 import Receipt from "@/components/beranda/Receipt";
 import OutputSection from "@/components/beranda/OutputSection";
+import ExportModal from "@/components/beranda/ExportModal";
 
 interface CartItem {
   namaProduk: string;
@@ -51,7 +62,9 @@ export default function BerandaPage() {
   const [satuan, setSatuan] = useState("KG");
   const [tanggalMasuk, setTanggalMasuk] = useState("");
   const [hargaBeliSatuan, setHargaBeliSatuan] = useState("");
-  const [productPrices, setProductPrices] = useState<Record<string, number>>({});
+  const [productPrices, setProductPrices] = useState<Record<string, number>>(
+    {}
+  );
 
   // Form Output State - KERANJANG
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -63,7 +76,9 @@ export default function BerandaPage() {
   const receiptRef = useRef<HTMLDivElement>(null!);
   const [stokData, setStokData] = useState<StokItem[]>([]);
   const [tujuanCustomer, setTujuanCustomer] = useState("");
-  const [customers, setCustomers] = useState<{ id: string; nama: string }[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; nama: string }[]>(
+    []
+  );
 
   // Autocomplete
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -78,9 +93,25 @@ export default function BerandaPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Satuan options
-  const satuanList = ["KG", "PCS", "LITER", "PACK", "BOX", "KARUNG"];
+  const [satuanOptions, setSatuanOptions] = useState<string[]>(["KG", "PCS", "LITER", "PACK", "BOX", "KARUNG"]);
+  const [customSatuan, setCustomSatuan] = useState("");
+
+  const handleAddSatuan = (type: 'input' | 'output') => {
+    const val = customSatuan.trim().toUpperCase();
+    if (!val) return;
+    if (!satuanOptions.includes(val)) {
+      setSatuanOptions([...satuanOptions, val]);
+    }
+    if (type === 'input') {
+      setSatuan(val);
+    } else {
+      setSatuanOutput(val);
+    }
+    setCustomSatuan("");
+  };
 
   useEffect(() => {
     const storedCabang = localStorage.getItem("cabang") || "";
@@ -124,7 +155,8 @@ export default function BerandaPage() {
       }
       if (item.type === "input") {
         stokMap[normalizedName].totalJumlah += item.jumlah;
-        stokMap[normalizedName].satuan = item.satuan || stokMap[normalizedName].satuan;
+        stokMap[normalizedName].satuan =
+          item.satuan || stokMap[normalizedName].satuan;
       } else if (item.type === "output") {
         stokMap[normalizedName].totalJumlah -= item.jumlah;
       }
@@ -144,7 +176,9 @@ export default function BerandaPage() {
 
   const loadSuppliers = async (cabangName: string) => {
     try {
-      const snap = await getDocs(collection(db, "cabang", cabangName, "suppliers"));
+      const snap = await getDocs(
+        collection(db, "cabang", cabangName, "suppliers")
+      );
       const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setSuppliers(data);
     } catch (e) {
@@ -154,9 +188,16 @@ export default function BerandaPage() {
 
   const loadCustomers = async (cabangName: string) => {
     try {
-      const snap = await getDocs(collection(db, "cabang", cabangName, "customers"));
-      const data = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) }));
-      const list = data.map((d) => ({ id: d.id, nama: (d.nama || "").toUpperCase() })).filter((d) => d.nama);
+      const snap = await getDocs(
+        collection(db, "cabang", cabangName, "customers")
+      );
+      const data = snap.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as any),
+      }));
+      const list = data
+        .map((d) => ({ id: d.id, nama: (d.nama || "").toUpperCase() }))
+        .filter((d) => d.nama);
       setCustomers(list);
     } catch (e) {
       console.error("Error loading customers:", e);
@@ -165,7 +206,9 @@ export default function BerandaPage() {
 
   const loadProductPrices = async (cabangName: string) => {
     try {
-      const snap = await getDocs(collection(db, "cabang", cabangName, "produk"));
+      const snap = await getDocs(
+        collection(db, "cabang", cabangName, "produk")
+      );
       const map: Record<string, number> = {};
       snap.docs.forEach((doc) => {
         const data = doc.data() as any;
@@ -191,7 +234,9 @@ export default function BerandaPage() {
       setShowSupplierDropdown(true);
       // Jika ada supplier yang namanya cocok persis, siapkan rekomendasi produk
       const normalized = value.trim().toUpperCase();
-      const exact = suppliers.find((s) => (s.nama || "").toUpperCase() === normalized);
+      const exact = suppliers.find(
+        (s) => (s.nama || "").toUpperCase() === normalized
+      );
       if (exact) {
         try {
           const recs = computeRecommendedProducts(exact);
@@ -278,8 +323,8 @@ export default function BerandaPage() {
       if (supplierSnapshot.empty) {
         await addDoc(collection(db, "cabang", cabang, "suppliers"), {
           nama: normalized,
-          kontak: ("-") as any, // Default kosong, bisa diisi nanti di Data Supplier
-          alamat: ("-") as any,
+          kontak: "-" as any, // Default kosong, bisa diisi nanti di Data Supplier
+          alamat: "-" as any,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           addedBy: username,
@@ -329,7 +374,13 @@ export default function BerandaPage() {
   };
 
   const handleInput = async () => {
-    if (!namaProduk || !namaSupplier || !jumlah || !tanggalMasuk || !hargaBeliSatuan) {
+    if (
+      !namaProduk ||
+      !namaSupplier ||
+      !jumlah ||
+      !tanggalMasuk ||
+      !hargaBeliSatuan
+    ) {
       setError("Semua field harus diisi!");
       setTimeout(() => setError(""), 3000);
       return;
@@ -341,10 +392,7 @@ export default function BerandaPage() {
       // AUTO-ADD SUPPLIER KALO BELUM ADA
       await checkAndAddSupplier(namaSupplier);
       // UPDATE SUPPLIER DENGAN HARGA SATUAN TERBARU
-      await updateSupplierPrices(
-        namaSupplier,
-        parseFloat(hargaBeliSatuan)
-      );
+      await updateSupplierPrices(namaSupplier, parseFloat(hargaBeliSatuan));
 
       // Simpan transaksi
       await addDoc(collection(db, "cabang", cabang, "transaksi"), {
@@ -432,7 +480,7 @@ export default function BerandaPage() {
     setCart(cart.filter((_, i) => i !== index));
   };
 
-// PROSES OUTPUT & GENERATE STRUK
+  // PROSES OUTPUT & GENERATE STRUK
   const processOutput = async () => {
     if (cart.length === 0) {
       setError("Keranjang kosong! Tambahkan barang dulu.");
@@ -466,10 +514,11 @@ export default function BerandaPage() {
       // Helper: ambil harga dari transaksi INPUT terakhir
       const getLatestPrices = (productName: string) => {
         const inputItems = riwayat.filter(
-          (r) => r.type === "input" && r.namaProduk === productName.toUpperCase()
+          (r) =>
+            r.type === "input" && r.namaProduk === productName.toUpperCase()
         );
         if (inputItems.length === 0) return { hargaBeli: 0, hargaJual: 0 };
-        
+
         // Urutkan dari yang terbaru
         const getMillis = (t: any): number => {
           if (!t) return 0;
@@ -477,7 +526,11 @@ export default function BerandaPage() {
           if (typeof t === "object") {
             const maybeFn = (t as any).toMillis;
             if (typeof maybeFn === "function") {
-              try { return maybeFn.call(t); } catch { return 0; }
+              try {
+                return maybeFn.call(t);
+              } catch {
+                return 0;
+              }
             }
             const seconds = (t as any).seconds;
             if (typeof seconds === "number") return seconds * 1000;
@@ -489,8 +542,10 @@ export default function BerandaPage() {
           }
           return 0;
         };
-        const sorted = inputItems.sort((a, b) => getMillis(b.timestamp) - getMillis(a.timestamp));
-        
+        const sorted = inputItems.sort(
+          (a, b) => getMillis(b.timestamp) - getMillis(a.timestamp)
+        );
+
         return {
           hargaBeli: sorted[0].hargaBeliSatuan || 0,
           hargaJual: sorted[0].hargaJualSatuan || 0,
@@ -545,7 +600,9 @@ export default function BerandaPage() {
 
     const popup = window.open("", "", "width=800,height=600");
     if (!popup) {
-      alert("Popup print diblokir oleh browser. Mohon izinkan pop-up untuk situs ini.");
+      alert(
+        "Popup print diblokir oleh browser. Mohon izinkan pop-up untuk situs ini."
+      );
       return;
     }
 
@@ -573,7 +630,9 @@ export default function BerandaPage() {
       } catch (e) {
         console.error("Gagal memanggil print:", e);
       } finally {
-        try { popup.close(); } catch {}
+        try {
+          popup.close();
+        } catch {}
         // Tutup modal struk setelah print agar tidak menghalangi interaksi
         setShowReceipt(false);
       }
@@ -658,42 +717,44 @@ export default function BerandaPage() {
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
                   Nama Produk <span className="text-red-500">*</span>
                 </label>
-              <input
-                type="text"
-                placeholder="Contoh: Telur Ayam"
-                value={namaProduk}
-                onChange={(e) => handleProdukChange(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-black uppercase"
-              />
-              {recommendedProducts.length > 0 && (
-                <div className="mt-2">
-                  <div className="text-xs font-semibold text-gray-600 mb-2">Rekomendasi dari supplier</div>
-                  <div className="flex flex-wrap gap-2">
-                    {recommendedProducts.slice(0, 10).map((name) => (
+                <input
+                  type="text"
+                  placeholder="Contoh: Telur Ayam"
+                  value={namaProduk}
+                  onChange={(e) => handleProdukChange(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-black uppercase"
+                />
+                {recommendedProducts.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-xs font-semibold text-gray-600 mb-2">
+                      Rekomendasi dari supplier
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {recommendedProducts.slice(0, 10).map((name) => (
+                        <button
+                          key={name}
+                          onClick={() => selectProduk(name)}
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition"
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {showProductDropdown && filteredProducts.length > 0 && (
+                  <div className="mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                    {filteredProducts.map((name) => (
                       <button
                         key={name}
                         onClick={() => selectProduk(name)}
-                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition"
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 transition text-gray-800 font-medium border-b border-gray-100 last:border-0"
                       >
                         {name}
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
-              {showProductDropdown && filteredProducts.length > 0 && (
-                <div className="mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-                  {filteredProducts.map((name) => (
-                    <button
-                      key={name}
-                      onClick={() => selectProduk(name)}
-                      className="w-full px-4 py-3 text-left hover:bg-blue-50 transition text-gray-800 font-medium border-b border-gray-100 last:border-0"
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              )}
+                )}
               </div>
 
               <div className="relative">
@@ -704,7 +765,9 @@ export default function BerandaPage() {
                   type="text"
                   placeholder="Ketik nama supplier..."
                   value={namaSupplier}
-                  onChange={(e) => handleSupplierChange(e.target.value.toUpperCase())}
+                  onChange={(e) =>
+                    handleSupplierChange(e.target.value.toUpperCase())
+                  }
                   onFocus={() => namaSupplier && setShowSupplierDropdown(true)}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-black uppercase"
                 />
@@ -716,8 +779,12 @@ export default function BerandaPage() {
                         onClick={() => selectSupplier(supplier)}
                         className="w-full px-4 py-3 text-left hover:bg-blue-50 transition text-gray-800 font-medium border-b border-gray-100 last:border-0"
                       >
-                        <div className="font-semibold text-gray-900">{supplier.nama}</div>
-                        <div className="text-sm text-gray-600">{supplier.kontak}</div>
+                        <div className="font-semibold text-gray-900">
+                          {supplier.nama}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {supplier.kontak}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -749,10 +816,28 @@ export default function BerandaPage() {
                   onChange={(e) => setSatuan(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-800 bg-white"
                 >
-                  {satuanList.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                  {satuanOptions.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Tambah satuan (misal: KG, LITER)"
+                    value={customSatuan}
+                    onChange={(e) => setCustomSatuan(e.target.value.toUpperCase())}
+                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-800"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddSatuan('input')}
+                    className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold"
+                  >
+                    Tambah
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -767,8 +852,6 @@ export default function BerandaPage() {
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-800"
                 />
               </div>
-
-              
 
               <div className="col-span-2">
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
@@ -807,6 +890,11 @@ export default function BerandaPage() {
             jumlahOutput={jumlahOutput}
             setJumlahOutput={setJumlahOutput}
             satuanOutput={satuanOutput}
+            setSatuanOutput={setSatuanOutput}
+            satuanOptions={satuanOptions}
+            customSatuan={customSatuan}
+            setCustomSatuan={setCustomSatuan}
+            handleAddSatuan={handleAddSatuan}
             tujuanCustomer={tujuanCustomer}
             setTujuanCustomer={setTujuanCustomer}
             getAvailableFor={getAvailableFor}
@@ -821,22 +909,46 @@ export default function BerandaPage() {
 
       {/* Riwayat Transaksi */}
       <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-        <h3 className="text-xl font-bold mb-5 text-gray-900 flex items-center gap-2">
-          <span>📊</span>
-          Riwayat Transaksi
-        </h3>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <span>📊</span>
+            Riwayat Transaksi
+          </h3>
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition flex items-center gap-2"
+          >
+            📥 Export Excel
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b-2 border-gray-200">
-                <th className="text-left py-4 px-4 font-bold text-gray-900">Waktu</th>
-                <th className="text-left py-4 px-4 font-bold text-gray-900">Type</th>
-                <th className="text-left py-4 px-4 font-bold text-gray-900">Produk</th>
-                <th className="text-left py-4 px-4 font-bold text-gray-900">Supplier</th>
-                <th className="text-left py-4 px-4 font-bold text-gray-900">Jumlah</th>
-                <th className="text-left py-4 px-4 font-bold text-gray-900">Harga Beli Satuan</th>
-                <th className="text-left py-4 px-4 font-bold text-gray-900">Harga Jual Satuan</th>
-                <th className="text-left py-4 px-4 font-bold text-gray-900">User</th>
+                <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  Waktu
+                </th>
+                <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  Type
+                </th>
+                <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  Produk
+                </th>
+                <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  Supplier
+                </th>
+                <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  Jumlah
+                </th>
+                <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  Harga Beli Satuan
+                </th>
+                <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  Harga Jual Satuan
+                </th>
+                <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  User
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -849,7 +961,10 @@ export default function BerandaPage() {
                 </tr>
               ) : (
                 riwayat.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100 hover:bg-blue-50 transition">
+                  <tr
+                    key={item.id}
+                    className="border-b border-gray-100 hover:bg-blue-50 transition"
+                  >
                     <td className="py-4 px-4 text-sm font-medium text-gray-700">
                       {formatDate(item.timestamp)}
                     </td>
@@ -864,18 +979,27 @@ export default function BerandaPage() {
                         {item.type === "input" ? "📥 INPUT" : "📤 OUTPUT"}
                       </span>
                     </td>
-                    <td className="py-4 px-4 font-semibold text-gray-900">{item.namaProduk}</td>
+                    <td className="py-4 px-4 font-semibold text-gray-900">
+                      {item.namaProduk}
+                    </td>
                     <td className="py-4 px-4 text-gray-700 font-medium">
                       {item.namaSupplier || "-"}
                     </td>
                     <td className="py-4 px-4 font-bold text-gray-900">
-                      {item.jumlah} <span className="text-gray-600 font-semibold">{item.satuan || ""}</span>
+                      {item.jumlah}{" "}
+                      <span className="text-gray-600 font-semibold">
+                        {item.satuan || ""}
+                      </span>
                     </td>
                     <td className="py-4 px-4 text-gray-700 font-medium">
-                      {typeof item.hargaBeliSatuan === "number" ? item.hargaBeliSatuan.toLocaleString("id-ID") : "-"}
+                      {typeof item.hargaBeliSatuan === "number"
+                        ? item.hargaBeliSatuan.toLocaleString("id-ID")
+                        : "-"}
                     </td>
                     <td className="py-4 px-4 text-gray-700 font-medium">
-                      {typeof item.hargaJualSatuan === "number" ? item.hargaJualSatuan.toLocaleString("id-ID") : "-"}
+                      {typeof item.hargaJualSatuan === "number"
+                        ? item.hargaJualSatuan.toLocaleString("id-ID")
+                        : "-"}
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-600 font-medium">
                       {item.user}
@@ -903,6 +1027,13 @@ export default function BerandaPage() {
           animation: slide-in 0.3s ease-out;
         }
       `}</style>
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        riwayat={riwayat}
+      />
     </div>
   );
 }

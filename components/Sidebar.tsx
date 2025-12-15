@@ -53,9 +53,22 @@ export default function Sidebar({
   return (
     <div className="w-64 bg-white shadow-lg flex flex-col h-screen">
       {/* Header Sidebar */}
-      <div className="p-6 border-b">
-        <h1 className="text-xl font-bold text-gray-800">Koperasi System</h1>
-        <p className="text-sm text-gray-500 mt-1 capitalize">{formatCabang(cabang)}</p>
+      <div className="p-4 border-b">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
+            <img
+              src="https://res.cloudinary.com/doepilwju/image/upload/v1765505991/hjs_otvbvc.png"
+              alt="Logo Koperasi"
+              className="w-10 h-10 object-contain"
+            />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-800">Koperasi System</h1>
+            <p className="text-xs text-gray-500 mt-0.5 capitalize">
+              {formatCabang(cabang)}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Menu Items */}

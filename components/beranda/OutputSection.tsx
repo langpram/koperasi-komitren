@@ -28,6 +28,11 @@ interface Props {
   jumlahOutput: string;
   setJumlahOutput: (v: string) => void;
   satuanOutput: string;
+  setSatuanOutput: (v: string) => void;
+  satuanOptions: string[];
+  customSatuan: string;
+  setCustomSatuan: (v: string) => void;
+  handleAddSatuan: (type: 'input' | 'output') => void;
   tujuanCustomer: string;
   setTujuanCustomer: (v: string) => void;
   getAvailableFor: (productName: string) => number;
@@ -185,8 +190,32 @@ export default function OutputSection({ stokData, customers, namaProdukOutput, s
           <label className="block text-sm font-semibold text-gray-800 mb-2">
             Satuan <span className="text-red-500">*</span>
           </label>
-          <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 font-semibold bg-gradient-to-br from-gray-50 to-gray-100 cursor-not-allowed shadow-sm">
-            ⚖️ {satuanOutput}
+          <select
+            value={satuanOutput}
+            onChange={(e) => setSatuanOutput(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-red-100 focus:border-red-500 outline-none transition text-gray-800 bg-white"
+          >
+            {satuanOptions.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <div className="mt-2 flex gap-2">
+            <input
+              type="text"
+              placeholder="Tambah satuan (misal: KG, LITER)"
+              value={customSatuan}
+              onChange={(e) => setCustomSatuan(e.target.value.toUpperCase())}
+              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-red-100 focus:border-red-500 outline-none transition text-gray-800"
+            />
+            <button
+              type="button"
+              onClick={() => handleAddSatuan('output')}
+              className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold"
+            >
+              Tambah
+            </button>
           </div>
         </div>
       </div>
