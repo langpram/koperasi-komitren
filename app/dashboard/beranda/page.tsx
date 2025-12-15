@@ -96,7 +96,7 @@ export default function BerandaPage() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Satuan options
-  const [satuanOptions, setSatuanOptions] = useState<string[]>(["KG", "PCS", "LITER", "PACK", "BOX", "KARUNG"]);
+  const [satuanOptions, setSatuanOptions] = useState<string[]>(["KG", "PCS", "LITER", "PACK", "BOX", "KARUNG", "SACHET", "DRG", "POUCH"]);
   const [customSatuan, setCustomSatuan] = useState("");
 
   const handleAddSatuan = (type: 'input' | 'output') => {
