@@ -65,7 +65,9 @@ export default function ExportModal({
       nextDay.setDate(nextDay.getDate() + 1);
 
       filtered = filtered.filter((item) => {
-        const itemDate = item.timestamp?.toDate?.() || new Date(item.timestamp);
+        const itemDate = (item.timestamp && typeof item.timestamp === 'object' && 'toDate' in item.timestamp) 
+          ? (item.timestamp as any).toDate() 
+          : new Date(item.timestamp);
         return itemDate >= targetDate && itemDate < nextDay;
       });
     } else if (exportType === "range") {
@@ -74,7 +76,9 @@ export default function ExportModal({
       end.setDate(end.getDate() + 1);
 
       filtered = filtered.filter((item) => {
-        const itemDate = item.timestamp?.toDate?.() || new Date(item.timestamp);
+        const itemDate = (item.timestamp && typeof item.timestamp === 'object' && 'toDate' in item.timestamp) 
+          ? (item.timestamp as any).toDate() 
+          : new Date(item.timestamp);
         return itemDate >= start && itemDate < end;
       });
     } else if (exportType === "bulan") {
