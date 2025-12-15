@@ -117,9 +117,10 @@ export default function ExportModal({
 
       // Format data untuk Excel
       const excelData = filteredData.map((item) => ({
-        Waktu: item.timestamp?.toDate?.()
-          ? item.timestamp.toDate().toLocaleString("id-ID")
-          : new Date(item.timestamp).toLocaleString("id-ID"),
+        Waktu:
+          item.timestamp && typeof item.timestamp === "object" && "toDate" in item.timestamp
+            ? (item.timestamp as any).toDate().toLocaleString("id-ID")
+            : new Date(item.timestamp).toLocaleString("id-ID"),
         Type: item.type === "input" ? "INPUT" : "OUTPUT",
         "Nama Produk": item.namaProduk || "-",
         Supplier: item.namaSupplier || "-",

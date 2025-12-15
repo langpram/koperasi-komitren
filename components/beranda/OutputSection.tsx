@@ -124,7 +124,7 @@ function CustomDropdown({ value, onChange, options, placeholder, icon }: any) {
   );
 }
 
-export default function OutputSection({ stokData, customers, namaProdukOutput, setNamaProdukOutput, jumlahOutput, setJumlahOutput, satuanOutput, tujuanCustomer, setTujuanCustomer, getAvailableFor, addToCart, cart, removeFromCart, processOutput, loading }: Props) {
+export default function OutputSection({ stokData, customers, namaProdukOutput, setNamaProdukOutput, jumlahOutput, setJumlahOutput, satuanOutput, setSatuanOutput, satuanOptions, customSatuan, setCustomSatuan, handleAddSatuan, tujuanCustomer, setTujuanCustomer, getAvailableFor, addToCart, cart, removeFromCart, processOutput, loading }: Props) {
   const customerOptions = customers.map(c => ({
     value: c.nama,
     label: c.nama
