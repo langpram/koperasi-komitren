@@ -43,8 +43,8 @@ export default function DashboardPage() {
       dapurAsem1: "Dapur Kp. Asem 1",
       dapurAsem2: "Dapur Kp. Asem 2",
       bantarkawung: "Dapur Bantarkawung",
-      madiun: "Dapur Madiun",
-      bandung: "Dapur Bandung",
+      madiun: "Madiun",
+      bandung: "Bandung",
     };
     return mapping[cabangName] || cabangName;
   };
