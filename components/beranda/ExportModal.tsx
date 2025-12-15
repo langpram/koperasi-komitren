@@ -84,7 +84,9 @@ export default function ExportModal({
     } else if (exportType === "bulan") {
       const [year, month] = selectedMonth.split("-").map(Number);
       filtered = filtered.filter((item) => {
-        const itemDate = item.timestamp?.toDate?.() || new Date(item.timestamp);
+        const itemDate = (item.timestamp && typeof item.timestamp === 'object' && 'toDate' in item.timestamp) 
+          ? (item.timestamp as any).toDate() 
+          : new Date(item.timestamp);
         return (
           itemDate.getFullYear() === year && itemDate.getMonth() === month - 1
         );
@@ -92,7 +94,9 @@ export default function ExportModal({
     } else if (exportType === "tahun") {
       const year = parseInt(selectedYear);
       filtered = filtered.filter((item) => {
-        const itemDate = item.timestamp?.toDate?.() || new Date(item.timestamp);
+        const itemDate = (item.timestamp && typeof item.timestamp === 'object' && 'toDate' in item.timestamp) 
+          ? (item.timestamp as any).toDate() 
+          : new Date(item.timestamp);
         return itemDate.getFullYear() === year;
       });
     }
