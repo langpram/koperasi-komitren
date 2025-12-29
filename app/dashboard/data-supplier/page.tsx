@@ -267,14 +267,14 @@ export default function DataSupplierPage() {
         Kontak: "081234567890",
         Alamat: "JL. CONTOH NO. 123, JAKARTA",
         "Jenis Barang": "SAYURAN, BUMBU DAPUR",
-        "Maksimum Pengiriman": "SENIN & KAMIS",
+        "Maksimum Pengiriman": "FULL/10 KG",
       },
       {
         Nama: "CV. SUPPLIER DUA",
         Kontak: "082345678901",
         Alamat: "JL. EXAMPLE NO. 456, BANDUNG",
         "Jenis Barang": "DAGING, AYAM",
-        "Maksimum Pengiriman": "SELASA & JUMAT",
+        "Maksimum Pengiriman": "FULL/10 KG",
       },
     ];
 
@@ -611,7 +611,7 @@ export default function DataSupplierPage() {
                   value={formData.maksimumPengiriman}
                   onChange={(e) => setFormData({ ...formData, maksimumPengiriman: e.target.value.toUpperCase() })}
                   className="w-full px-4 py-3 border-2 border-black rounded-xl focus:border-purple-500 outline-none transition text-black uppercase"
-                  placeholder="CONTOH: SENIN & KAMIS"
+                  placeholder="CONTOH: FULL/10 KG" 
                 />
               </div>
 
