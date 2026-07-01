@@ -33,6 +33,8 @@ interface TransaksiItem {
   masaBerlaku?: string;
   hargaBeliSatuan?: number;
   hargaJualSatuan?: number;
+  tanggalMasuk?: string;
+  tujuanCustomer?: string;
 }
 
 // Tambah nama bulan untuk dropdown laporan bulanan
@@ -569,7 +571,7 @@ export default function CekStokPage() {
       tanggalMasuk: transaksi.tanggalMasuk || "",
       hargaBeliSatuan: transaksi.hargaBeliSatuan || "",
       hargaJualSatuan: transaksi.hargaJualSatuan || "",
-      tujuanCustomer: (transaksi as any).tujuanCustomer || "",
+      tujuanCustomer: transaksi.tujuanCustomer || "",
     });
     setIsEditModalOpen(true);
   };
