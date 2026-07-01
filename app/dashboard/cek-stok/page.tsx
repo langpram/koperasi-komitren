@@ -70,13 +70,17 @@ export default function CekStokPage() {
 
   const satuanOptions = ["KG", "PCS", "LITER", "PACK", "BOX", "KARUNG"];
 
-  // State untuk modal riwayat transaksi + delete
+  // State untuk modal riwayat transaksi + delete + edit
   const [showTransaksiModal, setShowTransaksiModal] = useState(false);
   const [transaksiList, setTransaksiList] = useState<TransaksiItem[]>([]);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [suppliersMap, setSuppliersMap] = useState<Record<string, any>>({});
+  // Modal Edit Transaksi
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTransaksi, setEditingTransaksi] = useState<TransaksiItem | null>(null);
+  const [editFormData, setEditFormData] = useState<any>({});
 
   useEffect(() => {
     const storedCabang = localStorage.getItem("cabang") || "";
@@ -551,6 +555,67 @@ export default function CekStokPage() {
       alert(`❌ Error: ${error.message}`);
     } finally {
       setDeleteLoading(null);
+    }
+  };
+
+  // Fungsi buka modal edit transaksi
+  const openEditModal = (transaksi: TransaksiItem) => {
+    setEditingTransaksi(transaksi);
+    setEditFormData({
+      namaProduk: transaksi.namaProduk,
+      namaSupplier: transaksi.namaSupplier || "",
+      jumlah: transaksi.jumlah,
+      satuan: transaksi.satuan,
+      tanggalMasuk: transaksi.tanggalMasuk || "",
+      hargaBeliSatuan: transaksi.hargaBeliSatuan || "",
+      hargaJualSatuan: transaksi.hargaJualSatuan || "",
+      tujuanCustomer: (transaksi as any).tujuanCustomer || "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Fungsi simpan edit transaksi
+  const saveEditTransaksi = async () => {
+    if (!editingTransaksi) return;
+    try {
+      // Update transaksi
+      const trxRef = doc(db, "cabang", cabang, "transaksi", editingTransaksi.id);
+      await updateDoc(trxRef, {
+        namaProduk: editFormData.namaProduk,
+        namaSupplier: editFormData.namaSupplier,
+        jumlah: parseFloat(editFormData.jumlah),
+        satuan: editFormData.satuan,
+        tanggalMasuk: editFormData.tanggalMasuk,
+        hargaBeliSatuan: parseFloat(editFormData.hargaBeliSatuan) || 0,
+        hargaJualSatuan: parseFloat(editFormData.hargaJualSatuan) || 0,
+        tujuanCustomer: editFormData.tujuanCustomer,
+        updatedAt: new Date(),
+      });
+
+      // Jika harga jual diubah, update collection produk
+      if (editFormData.hargaJualSatuan) {
+        const produkRef = doc(db, "cabang", cabang, "produk", editFormData.namaProduk.toUpperCase());
+        await setDoc(
+          produkRef,
+          {
+            namaProduk: editFormData.namaProduk.toUpperCase(),
+            hargaJualSatuan: parseFloat(editFormData.hargaJualSatuan),
+            updatedAt: new Date(),
+          },
+          { merge: true }
+        );
+        // Update local state productPrices
+        setProductPrices((prev) => ({
+          ...prev,
+          [editFormData.namaProduk.toUpperCase()]: parseFloat(editFormData.hargaJualSatuan),
+        }));
+      }
+
+      alert("✅ Transaksi berhasil diedit!");
+      setIsEditModalOpen(false);
+      setEditingTransaksi(null);
+    } catch (e: any) {
+      alert(`❌ Error: ${e.message}`);
     }
   };
 
@@ -1097,17 +1162,23 @@ export default function CekStokPage() {
                             <span className="text-gray-600">{item.satuan}</span>
                           </td>
                           <td className="py-3 px-3 text-xs text-gray-600 font-medium">
-                            {item.user}
-                          </td>
-                          <td className="py-3 px-3">
-                            <button
-                              onClick={() => handleDeleteTransaksi(item.id)}
-                              disabled={deleteLoading === item.id}
-                              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white rounded-lg font-bold text-xs transition"
-                            >
-                              {deleteLoading === item.id ? "⏳" : "🗑️ Hapus"}
-                            </button>
-                          </td>
+                          {item.user}
+                        </td>
+                        <td className="py-3 px-3 flex gap-2">
+                          <button
+                            onClick={() => openEditModal(item)}
+                            className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-bold text-xs transition"
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTransaksi(item.id)}
+                            disabled={deleteLoading === item.id}
+                            className="px-3 py-1.5 bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white rounded-lg font-bold text-xs transition"
+                          >
+                            {deleteLoading === item.id ? "⏳" : "🗑️ Hapus"}
+                          </button>
+                        </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1122,6 +1193,122 @@ export default function CekStokPage() {
                 className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-xl font-bold transition"
               >
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Transaksi */}
+      {isEditModalOpen && editingTransaksi && (
+        <div className="fixed inset-0 backdrop-blur-md bg-white/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                ✏️ Edit Transaksi
+              </h3>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-3xl font-bold">×</button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Nama Produk</label>
+                <input
+                  type="text"
+                  value={editFormData.namaProduk}
+                  onChange={(e) => setEditFormData({...editFormData, namaProduk: e.target.value.toUpperCase()})}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
+                />
+              </div>
+
+              {editingTransaksi.type === "input" && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Nama Supplier</label>
+                  <input
+                    type="text"
+                    value={editFormData.namaSupplier}
+                    onChange={(e) => setEditFormData({...editFormData, namaSupplier: e.target.value.toUpperCase()})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
+                  />
+                </div>
+              )}
+
+              {editingTransaksi.type === "output" && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Tujuan Customer</label>
+                  <input
+                    type="text"
+                    value={editFormData.tujuanCustomer}
+                    onChange={(e) => setEditFormData({...editFormData, tujuanCustomer: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Jumlah</label>
+                  <input
+                    type="number"
+                    value={editFormData.jumlah}
+                    onChange={(e) => setEditFormData({...editFormData, jumlah: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Satuan</label>
+                  <select
+                    value={editFormData.satuan}
+                    onChange={(e) => setEditFormData({...editFormData, satuan: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900 bg-white"
+                  >
+                    {satuanOptions.map((s) => (
+                      <option key={s} value={s} className="text-gray-900">{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Harga Beli Satuan</label>
+                  <input
+                    type="number"
+                    value={editFormData.hargaBeliSatuan}
+                    onChange={(e) => setEditFormData({...editFormData, hargaBeliSatuan: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Harga Jual Satuan</label>
+                  <input
+                    type="number"
+                    value={editFormData.hargaJualSatuan}
+                    onChange={(e) => setEditFormData({...editFormData, hargaJualSatuan: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
+                  />
+                </div>
+              </div>
+
+              {editingTransaksi.type === "input" && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Tanggal Masuk</label>
+                  <input
+                    type="date"
+                    value={editFormData.tanggalMasuk}
+                    onChange={(e) => setEditFormData({...editFormData, tanggalMasuk: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setIsEditModalOpen(false)} className="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl font-bold transition">
+                Batal
+              </button>
+              <button onClick={saveEditTransaksi} className="flex-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold transition">
+                💾 Simpan
               </button>
             </div>
           </div>
