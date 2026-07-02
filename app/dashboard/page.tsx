@@ -6,7 +6,8 @@ import Sidebar from "@/components/Sidebar";
 import BerandaPage from "@/app/dashboard/beranda/page";
 import CekStokPage from "@/app/dashboard/cek-stok/page";
 import DataSupplierPage from "@/app/dashboard/data-supplier/page";
-import DataCustomerPage from "@/app/dashboard/data-customer/page"; // ✅ TAMBAH INI
+import DataCustomerPage from "@/app/dashboard/data-customer/page";
+import RiwayatPenjualanPage from "@/app/dashboard/riwayat-penjualan/page";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -53,7 +54,8 @@ export default function DashboardPage() {
     beranda: "Beranda",
     "cek-stok": "Cek Stok",
     "data-supplier": "Data Supplier",
-    "data-customer": "Data Customer", // ✅ TAMBAH INI
+    "data-customer": "Data Customer",
+    "riwayat-penjualan": "Riwayat Penjualan",
   };
 
   return (
@@ -81,7 +83,8 @@ export default function DashboardPage() {
           {activeMenu === "beranda" && <BerandaPage />}
           {activeMenu === "cek-stok" && <CekStokPage />}
           {activeMenu === "data-supplier" && <DataSupplierPage />}
-          {activeMenu === "data-customer" && <DataCustomerPage />} {/* ✅ TAMBAH INI */}
+          {activeMenu === "data-customer" && <DataCustomerPage />}
+          {activeMenu === "riwayat-penjualan" && <RiwayatPenjualanPage />}
         </div>
       </div>
     </div>

@@ -24,6 +24,7 @@ export default function Sidebar({
     { id: "cek-stok", label: "Cek Stok", icon: "📦" },
     { id: "data-supplier", label: "Data Supplier", icon: "🏢" },
     { id: "data-customer", label: "Data Customer", icon: "👤" },
+    { id: "riwayat-penjualan", label: "Riwayat Penjualan", icon: "💰" },
   ];
 
   const handleLogout = () => {
