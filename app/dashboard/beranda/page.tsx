@@ -93,6 +93,7 @@ export default function BerandaPage() {
 
   // Riwayat
   const [riwayat, setRiwayat] = useState<TransaksiItem[]>([]);
+  const [searchRiwayat, setSearchRiwayat] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
@@ -1017,17 +1018,26 @@ export default function BerandaPage() {
 
       {/* Riwayat Transaksi */}
       <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-5 gap-4">
           <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <span>📊</span>
             Riwayat Transaksi
           </h3>
-          <button
-            onClick={() => setIsExportModalOpen(true)}
-            className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition flex items-center gap-2"
-          >
-            📥 Export Excel
-          </button>
+          <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+            <input
+              type="text"
+              placeholder="🔍 Cari nama produk, supplier, atau user..."
+              value={searchRiwayat}
+              onChange={(e) => setSearchRiwayat(e.target.value)}
+              className="w-full md:w-80 px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
+            />
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition flex items-center gap-2"
+            >
+              📥 Export Excel
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -1063,15 +1073,30 @@ export default function BerandaPage() {
               </tr>
             </thead>
             <tbody>
-              {riwayat.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-12 text-gray-500">
-                    <div className="text-5xl mb-3">📦</div>
-                    <div className="font-medium">Belum ada transaksi</div>
-                  </td>
-                </tr>
-              ) : (
-                riwayat.map((item) => (
+              {(() => {
+                const filtered = riwayat.filter((item) => {
+                  const search = searchRiwayat.toLowerCase();
+                  return (
+                    item.namaProduk.toLowerCase().includes(search) ||
+                    (item.namaSupplier && item.namaSupplier.toLowerCase().includes(search)) ||
+                    item.user.toLowerCase().includes(search)
+                  );
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={9} className="text-center py-12 text-gray-500">
+                        <div className="text-5xl mb-3">📦</div>
+                        <div className="font-medium">
+                          {searchRiwayat ? "Transaksi tidak ditemukan" : "Belum ada transaksi"}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return filtered.map((item) => (
                   <tr
                     key={item.id}
                     className="border-b border-gray-100 hover:bg-blue-50 transition"
@@ -1124,8 +1149,8 @@ export default function BerandaPage() {
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
+                ));
+              })()}
             </tbody>
           </table>
         </div>
