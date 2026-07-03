@@ -398,7 +398,6 @@ export default function CekStokPage() {
           qtyOut: 0,
           costSum: 0,
           revenueSum: 0,
-          suppliers: new Set(),
         };
       }
       if (t.type === "input") {
@@ -406,9 +405,6 @@ export default function CekStokPage() {
         const hb =
           typeof t.hargaBeliSatuan === "number" ? t.hargaBeliSatuan : 0;
         byProduk[name].costSum += (t.jumlah || 0) * hb;
-        if (t.namaSupplier) {
-          byProduk[name].suppliers.add(t.namaSupplier);
-        }
       } else if (t.type === "output") {
         byProduk[name].qtyOut += t.jumlah;
         const hj =
@@ -421,7 +417,33 @@ export default function CekStokPage() {
     });
 
     const rows = Object.values(byProduk).map((p: any, idx) => {
-      const hargaBeli = p.qtyIn > 0 ? p.costSum / p.qtyIn : 0;
+      // Dapatkan sisa stok saat ini dari stokData
+      const stokItem = stokData.find(s => s.namaProduk === p.namaProduk);
+      const sisaStok = stokItem ? stokItem.totalJumlah : 0;
+      
+      // Ambil semua transaksi input untuk produk ini dari SELURUH riwayat (bukan hanya bulan ini)
+      const semuaTransaksiInputProduk = transaksiList.filter(
+        t => t.type === "input" && t.namaProduk.toUpperCase() === p.namaProduk
+      );
+      
+      // Ambil semua supplier yang pernah memasok produk ini
+      const suppliers = new Set<string>();
+      semuaTransaksiInputProduk.forEach(t => {
+        if (t.namaSupplier) {
+          suppliers.add(t.namaSupplier);
+        }
+      });
+      
+      // Hitung harga beli rata-rata dari semua transaksi input (bukan hanya bulan ini)
+      let totalQtySeluruhWaktu = 0;
+      let totalCostSeluruhWaktu = 0;
+      semuaTransaksiInputProduk.forEach(t => {
+        totalQtySeluruhWaktu += t.jumlah;
+        const hb = typeof t.hargaBeliSatuan === "number" ? t.hargaBeliSatuan : 0;
+        totalCostSeluruhWaktu += t.jumlah * hb;
+      });
+      const hargaBeli = totalQtySeluruhWaktu > 0 ? totalCostSeluruhWaktu / totalQtySeluruhWaktu : 0;
+      
       const hargaJual = productPrices[p.namaProduk] || 0;
       const totalHargaBeli = p.qtyIn * hargaBeli;
       const totalHargaJual = p.qtyIn * hargaJual;
@@ -432,9 +454,11 @@ export default function CekStokPage() {
 
       return {
         "NAMA PRODUK": p.namaProduk,
-        SUPLIER: Array.from(p.suppliers).join(", "),
+        SUPLIER: Array.from(suppliers).join(", "),
         "QTY IN": p.qtyIn,
         "QTY OUT": p.qtyOut,
+        "SISA STOK SAAT INI": sisaStok,
+        SATUAN: p.satuan,
         "HARGA BELI DARI SUPPLIER": Math.round(hargaBeli),
         "HARGA JUAL": Math.round(hargaJual),
         "TOTAL HARGA BELI": Math.round(totalHargaBeli),
@@ -453,6 +477,8 @@ export default function CekStokPage() {
       { wch: 30 }, // SUPLIER
       { wch: 10 }, // QTY IN
       { wch: 10 }, // QTY OUT
+      { wch: 20 }, // SISA STOK SAAT INI
+      { wch: 10 }, // SATUAN
       { wch: 25 }, // HARGA BELI DARI SUPPLIER
       { wch: 15 }, // HARGA JUAL
       { wch: 20 }, // TOTAL HARGA BELI
