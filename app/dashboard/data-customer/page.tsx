@@ -484,12 +484,26 @@ export default function DataCustomerPage() {
                     <td className="py-4 px-4 font-bold text-gray-900">{customer.nama}</td>
                     <td className="py-4 px-4 text-gray-600 text-sm">{customer.alamat}</td>
                     <td className="py-4 px-4 text-gray-700">
-                      <a
-                        href={`tel:${customer.noTelepon}`}
-                        className="text-blue-600 hover:underline font-semibold"
-                      >
-                        📞 {customer.noTelepon}
-                      </a>
+                      {(() => {
+                        // Membersihkan nomor: menghilangkan spasi, strip, dan ubah awalan 0 jadi 62
+                        let cleanedNo = customer.noTelepon.replace(/[\s\-]/g, "");
+                        if (cleanedNo.startsWith("0")) {
+                          cleanedNo = "62" + cleanedNo.slice(1);
+                        } else if (!cleanedNo.startsWith("62")) {
+                          // Jika tidak mulai dengan 0 atau 62, biarkan saja
+                          cleanedNo = customer.noTelepon.replace(/[\s\-]/g, "");
+                        }
+                        return (
+                          <a
+                            href={`https://wa.me/${cleanedNo}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold transition shadow-md"
+                          >
+                            💬 {customer.noTelepon}
+                          </a>
+                        );
+                      })()}
                     </td>
                     <td className="py-4 px-4">
                       <span className="px-3 py-1.5 bg-teal-100 text-teal-700 rounded-lg text-xs font-bold">

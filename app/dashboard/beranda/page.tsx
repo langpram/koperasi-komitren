@@ -82,6 +82,12 @@ export default function BerandaPage() {
   const [customers, setCustomers] = useState<{ id: string; nama: string }[]>(
     []
   );
+  
+  // State untuk cetak struk dari riwayat
+  const [showRiwayatReceipt, setShowRiwayatReceipt] = useState(false);
+  const [riwayatReceiptData, setRiwayatReceiptData] = useState<ReceiptData | null>(null);
+  const [riwayatTujuanCustomer, setRiwayatTujuanCustomer] = useState("");
+  const riwayatReceiptRef = useRef<HTMLDivElement>(null!);
 
   // Autocomplete
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -625,54 +631,41 @@ export default function BerandaPage() {
     }
   };
 
-  // PRINT STRUK
+  // PRINT STRUK - VERSI SIMPLE
   const printReceipt = () => {
-    const printContent = receiptRef.current;
-    if (!printContent) return;
-
-    const popup = window.open("", "", "width=800,height=600");
-    if (!popup) {
-      alert(
-        "Popup print diblokir oleh browser. Mohon izinkan pop-up untuk situs ini."
-      );
-      return;
-    }
-
-    // Tulis konten struk ke window baru
-    popup.document.open();
-    popup.document.write(`
-      <!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Struk Output Barang</title>
-        </head>
-        <body>
-          ${printContent.innerHTML}
-        </body>
-      </html>
-    `);
-    popup.document.close();
-
-    // Tunggu sampai konten selesai di-render, baru panggil print
-    const doPrint = () => {
-      try {
-        popup.focus();
-        popup.print();
-      } catch (e) {
-        console.error("Gagal memanggil print:", e);
-      } finally {
-        try {
-          popup.close();
-        } catch {}
-        // Tutup modal struk setelah print agar tidak menghalangi interaksi
-        setShowReceipt(false);
-      }
+    window.print();
+    // Tutup modal setelah print dialog print
+    setTimeout(() => setShowReceipt(false), 500);
+  };
+  
+  // PRINT STRUK DARI RIWAYAT - VERSI SIMPLE
+  const printRiwayatReceipt = () => {
+    window.print();
+    // Tutup modal setelah print dialog print
+    setTimeout(() => setShowRiwayatReceipt(false), 500);
+  };
+  
+  // BUKA STRUK DARI RIWAYAT
+  const openRiwayatReceipt = (item: TransaksiItem) => {
+    // Buat receipt data dari transaksi item
+    const receipt: ReceiptData = {
+      cabang: cabang,
+      items: [
+        {
+          namaProduk: item.namaProduk,
+          jumlah: item.jumlah,
+          satuan: item.satuan,
+          hargaSatuan: item.hargaJualSatuan || 0
+        }
+      ],
+      user: item.user,
+      timestamp: item.timestamp?.toDate?.() || new Date(item.timestamp),
+      noStruk: `OUT-${item.id}`
     };
-
-    // Jika 'load' tidak terpanggil, fallback dengan sedikit delay
-    popup.addEventListener("load", () => setTimeout(doPrint, 50));
-    setTimeout(doPrint, 500);
+    
+    setRiwayatReceiptData(receipt);
+    setRiwayatTujuanCustomer((item as any).tujuanCustomer || "");
+    setShowRiwayatReceipt(true);
   };
 
   const formatDate = (timestamp: any) => {
@@ -775,6 +768,17 @@ export default function BerandaPage() {
           tujuanCustomer={tujuanCustomer}
           onPrint={printReceipt}
           onClose={() => setShowReceipt(false)}
+        />
+      )}
+      
+      {/* Modal Struk dari Riwayat */}
+      {showRiwayatReceipt && riwayatReceiptData && (
+        <Receipt
+          receiptData={riwayatReceiptData}
+          receiptRef={riwayatReceiptRef}
+          tujuanCustomer={riwayatTujuanCustomer}
+          onPrint={printRiwayatReceipt}
+          onClose={() => setShowRiwayatReceipt(false)}
         />
       )}
 
@@ -1141,12 +1145,22 @@ export default function BerandaPage() {
                       {item.user}
                     </td>
                     <td className="py-4 px-4">
-                      <button
-                        onClick={() => openEditModal(item)}
-                        className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-bold transition"
-                      >
-                        ✏️ Edit
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openEditModal(item)}
+                          className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-bold transition"
+                        >
+                          ✏️ Edit
+                        </button>
+                        {item.type === "output" && (
+                          <button
+                            onClick={() => openRiwayatReceipt(item)}
+                            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition"
+                          >
+                            🖨️ Cetak
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ));
