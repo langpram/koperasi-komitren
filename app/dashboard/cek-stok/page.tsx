@@ -79,6 +79,7 @@ export default function CekStokPage() {
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [suppliersMap, setSuppliersMap] = useState<Record<string, any>>({});
+  const [searchTransaksiQuery, setSearchTransaksiQuery] = useState("");
   // Modal Edit Transaksi
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTransaksi, setEditingTransaksi] = useState<TransaksiItem | null>(null);
@@ -103,14 +104,34 @@ export default function CekStokPage() {
     const q = query(collection(db, "cabang", cabangName, "transaksi"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const transaksi = snapshot.docs.map((doc) => doc.data());
+      let transaksi = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      console.log("📊 All transaksi docs:", transaksi);
+      
+      // Sort transactions by timestamp ascending (oldest first)
+      transaksi.sort((a, b) => {
+        const timeA = a.timestamp?.toMillis?.() || 0;
+        const timeB = b.timestamp?.toMillis?.() || 0;
+        return timeA - timeB;
+      });
+      
+      // Log all MINYAK GORENG 2 LITER transactions
+      const minyakTransactions = transaksi.filter(t => 
+        (t.namaProduk || "").toUpperCase().trim() === "MINYAK GORENG 2 LITER"
+      );
+      console.log("🫒 All MINYAK GORENG 2 LITER transactions:", minyakTransactions);
 
       // Kalkulasi stok per produk dengan NORMALISASI NAMA
       const stokMap: { [key: string]: StokItem } = {};
 
       transaksi.forEach((item: any) => {
         // NORMALISASI: Semua huruf besar & trim whitespace
-        const normalizedName = item.namaProduk.toUpperCase().trim();
+        const normalizedName = (item.namaProduk || "").toUpperCase().trim();
+        console.log(`Processing item ${item.id}:`, { type: item.type, namaProduk: item.namaProduk, normalizedName, jumlah: item.jumlah, supplier: item.namaSupplier });
+        if (!normalizedName) return;
+        
+        // Pastikan jumlah adalah angka
+        const jumlah = parseFloat(item.jumlah) || 0;
+        console.log(`Parsed jumlah:`, jumlah);
 
         if (!stokMap[normalizedName]) {
           stokMap[normalizedName] = {
@@ -123,28 +144,33 @@ export default function CekStokPage() {
 
         if (item.type === "input") {
           // Tambah stok
-          stokMap[normalizedName].totalJumlah += item.jumlah;
+          stokMap[normalizedName].totalJumlah += jumlah;
+          console.log(`Added input ${jumlah}, new total for ${normalizedName}:`, stokMap[normalizedName].totalJumlah);
           stokMap[normalizedName].satuan =
             item.satuan || stokMap[normalizedName].satuan;
 
-          // Track supplier
+          // Track supplier - even if empty
+          const supplierName = (item.namaSupplier || "Supplier Tidak Diketahui").toUpperCase().trim();
           const supplierIndex = stokMap[normalizedName].suppliers.findIndex(
-            (s) => s.nama === item.namaSupplier
+            (s) => (s.nama || "Supplier Tidak Diketahui").toUpperCase().trim() === supplierName
           );
           if (supplierIndex >= 0) {
             stokMap[normalizedName].suppliers[supplierIndex].jumlah +=
-              item.jumlah;
+              jumlah;
           } else {
             stokMap[normalizedName].suppliers.push({
-              nama: item.namaSupplier,
-              jumlah: item.jumlah,
+              nama: item.namaSupplier || "Supplier Tidak Diketahui",
+              jumlah: jumlah,
             });
           }
         } else if (item.type === "output") {
           // Kurangi stok
-          stokMap[normalizedName].totalJumlah -= item.jumlah;
+          stokMap[normalizedName].totalJumlah -= jumlah;
+          console.log(`Subtracted output ${jumlah}, new total for ${normalizedName}:`, stokMap[normalizedName].totalJumlah);
         }
       });
+      
+      console.log("Final stokMap:", stokMap);
 
       const stokArray = Object.values(stokMap);
       setStokData(stokArray);
@@ -211,7 +237,9 @@ export default function CekStokPage() {
       (t) =>
         t.type === "input" &&
         t.namaProduk?.toUpperCase() === productName.toUpperCase() &&
-        (!supplierName || t.namaSupplier === supplierName)
+        (!supplierName || 
+          (supplierName === "Supplier Tidak Diketahui" && !t.namaSupplier) ||
+          t.namaSupplier === supplierName)
     );
     if (filtered.length === 0) return 0;
     filtered.sort((a, b) => {
@@ -229,10 +257,9 @@ export default function CekStokPage() {
     transaksiList.forEach((t) => {
       if (
         t.type === "input" &&
-        t.namaProduk?.toUpperCase() === upper &&
-        t.namaSupplier
+        t.namaProduk?.toUpperCase() === upper
       ) {
-        supplierSet.add(t.namaSupplier);
+        supplierSet.add(t.namaSupplier || "Supplier Tidak Diketahui");
       }
     });
     const latestPerSupplier = Array.from(supplierSet)
@@ -389,7 +416,10 @@ export default function CekStokPage() {
     }
     const byProduk: Record<string, any> = {};
     data.forEach((t) => {
-      const name = t.namaProduk.toUpperCase();
+      const name = (t.namaProduk || "").toUpperCase().trim();
+      if (!name) return;
+      const jumlah = parseFloat(t.jumlah as any) || 0;
+      
       if (!byProduk[name]) {
         byProduk[name] = {
           namaProduk: name,
@@ -401,17 +431,17 @@ export default function CekStokPage() {
         };
       }
       if (t.type === "input") {
-        byProduk[name].qtyIn += t.jumlah;
+        byProduk[name].qtyIn += jumlah;
         const hb =
           typeof t.hargaBeliSatuan === "number" ? t.hargaBeliSatuan : 0;
-        byProduk[name].costSum += (t.jumlah || 0) * hb;
+        byProduk[name].costSum += jumlah * hb;
       } else if (t.type === "output") {
-        byProduk[name].qtyOut += t.jumlah;
+        byProduk[name].qtyOut += jumlah;
         const hj =
           typeof t.hargaJualSatuan === "number"
             ? t.hargaJualSatuan
             : productPrices[name] || 0;
-        byProduk[name].revenueSum += (t.jumlah || 0) * hj;
+        byProduk[name].revenueSum += jumlah * hj;
       }
       byProduk[name].satuan = t.satuan || byProduk[name].satuan;
     });
@@ -438,9 +468,10 @@ export default function CekStokPage() {
       let totalQtySeluruhWaktu = 0;
       let totalCostSeluruhWaktu = 0;
       semuaTransaksiInputProduk.forEach(t => {
-        totalQtySeluruhWaktu += t.jumlah;
+        const jumlah = parseFloat(t.jumlah as any) || 0;
+        totalQtySeluruhWaktu += jumlah;
         const hb = typeof t.hargaBeliSatuan === "number" ? t.hargaBeliSatuan : 0;
-        totalCostSeluruhWaktu += t.jumlah * hb;
+        totalCostSeluruhWaktu += jumlah * hb;
       });
       const hargaBeli = totalQtySeluruhWaktu > 0 ? totalCostSeluruhWaktu / totalQtySeluruhWaktu : 0;
       
@@ -510,12 +541,16 @@ export default function CekStokPage() {
     > = {};
 
     inputs.forEach((t) => {
-      const produk = t.namaProduk.toUpperCase();
-      const supplier = (t.namaSupplier || "-").toUpperCase();
+      const produk = (t.namaProduk || "").toUpperCase().trim();
+      const supplier = (t.namaSupplier || "-").toUpperCase().trim();
+      if (!produk) return;
+      
+      const jumlah = parseFloat(t.jumlah as any) || 0;
+      
       if (!productMap[produk]) productMap[produk] = {};
       if (!productMap[produk][supplier])
         productMap[produk][supplier] = { qty: 0, satuan: t.satuan || "" };
-      productMap[produk][supplier].qty += t.jumlah || 0;
+      productMap[produk][supplier].qty += jumlah;
       productMap[produk][supplier].satuan =
         t.satuan || productMap[produk][supplier].satuan;
     });
@@ -606,12 +641,31 @@ export default function CekStokPage() {
   const saveEditTransaksi = async () => {
     if (!editingTransaksi) return;
     try {
+      const originalJumlah = parseFloat(editingTransaksi.jumlah as any) || 0;
+      const newJumlah = parseFloat(editFormData.jumlah) || 0;
+      
+      // Pengecekan stok jika transaksi OUTPUT
+      if (editingTransaksi.type === "output") {
+        const delta = newJumlah - originalJumlah;
+        const productName = editFormData.namaProduk.toUpperCase().trim();
+        const currentStokItem = stokData.find(s => s.namaProduk === productName);
+        const currentStok = currentStokItem ? currentStokItem.totalJumlah : 0;
+        
+        // Hitung stok setelah edit: currentStok (which includes originalJumlah being subtracted) minus delta (because delta is newJumlah - originalJumlah)
+        const hypotheticalStok = currentStok - delta;
+        
+        if (hypotheticalStok < 0) {
+          alert(`❌ Stok tidak cukup untuk ${productName}! Stok saat ini: ${currentStok}, butuh: ${newJumlah}`);
+          return;
+        }
+      }
+      
       // Update transaksi
       const trxRef = doc(db, "cabang", cabang, "transaksi", editingTransaksi.id);
       await updateDoc(trxRef, {
         namaProduk: editFormData.namaProduk,
         namaSupplier: editFormData.namaSupplier,
-        jumlah: parseFloat(editFormData.jumlah),
+        jumlah: newJumlah,
         satuan: editFormData.satuan,
         tanggalMasuk: editFormData.tanggalMasuk,
         hargaBeliSatuan: parseFloat(editFormData.hargaBeliSatuan) || 0,
@@ -1126,41 +1180,66 @@ export default function CekStokPage() {
             </div>
 
             <div className="p-6 overflow-y-auto flex-1">
-              {transaksiList.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <div className="text-5xl mb-3">📦</div>
-                  <div className="font-medium">Belum ada transaksi</div>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b-2 border-gray-200">
-                        <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
-                          Waktu
-                        </th>
-                        <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
-                          Type
-                        </th>
-                        <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
-                          Produk
-                        </th>
-                        <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
-                          Supplier
-                        </th>
-                        <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
-                          Jumlah
-                        </th>
-                        <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
-                          User
-                        </th>
-                        <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
-                          Aksi
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transaksiList.map((item) => (
+              <div className="mb-6">
+                <input
+                  type="text"
+                  placeholder="🔍 Cari nama produk, supplier, user..."
+                  value={searchTransaksiQuery}
+                  onChange={(e) => setSearchTransaksiQuery(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
+                />
+              </div>
+              {(() => {
+                const filtered = transaksiList.filter((item) => {
+                  const q = searchTransaksiQuery.toLowerCase();
+                  return (
+                    item.namaProduk.toLowerCase().includes(q) ||
+                    (item.namaSupplier && item.namaSupplier.toLowerCase().includes(q)) ||
+                    item.user.toLowerCase().includes(q)
+                  );
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-center py-12 text-gray-500">
+                      <div className="text-5xl mb-3">📦</div>
+                      <div className="font-medium">
+                        {searchTransaksiQuery ? "Transaksi tidak ditemukan" : "Belum ada transaksi"}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b-2 border-gray-200">
+                          <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
+                            Waktu
+                          </th>
+                          <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
+                            Type
+                          </th>
+                          <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
+                            Produk
+                          </th>
+                          <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
+                            Supplier
+                          </th>
+                          <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
+                            Jumlah
+                          </th>
+                          <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
+                            User
+                          </th>
+                          <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
+                            Aksi
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map((item) => (
                         <tr
                           key={item.id}
                           className="border-b border-gray-100 hover:bg-red-50 transition"
@@ -1212,7 +1291,8 @@ export default function CekStokPage() {
                     </tbody>
                   </table>
                 </div>
-              )}
+                );
+              })()}
             </div>
 
             <div className="p-6 border-t-2 border-gray-200">

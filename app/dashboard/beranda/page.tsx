@@ -160,6 +160,10 @@ export default function BerandaPage() {
     riwayat.forEach((item: TransaksiItem) => {
       const normalizedName = (item.namaProduk || "").toUpperCase().trim();
       if (!normalizedName) return;
+      
+      // Pastikan jumlah adalah angka
+      const jumlah = parseFloat(item.jumlah as any) || 0;
+      
       if (!stokMap[normalizedName]) {
         stokMap[normalizedName] = {
           namaProduk: normalizedName,
@@ -168,11 +172,11 @@ export default function BerandaPage() {
         };
       }
       if (item.type === "input") {
-        stokMap[normalizedName].totalJumlah += item.jumlah;
+        stokMap[normalizedName].totalJumlah += jumlah;
         stokMap[normalizedName].satuan =
           item.satuan || stokMap[normalizedName].satuan;
       } else if (item.type === "output") {
-        stokMap[normalizedName].totalJumlah -= item.jumlah;
+        stokMap[normalizedName].totalJumlah -= jumlah;
       }
     });
     setStokData(Object.values(stokMap));
@@ -701,15 +705,35 @@ export default function BerandaPage() {
     if (!editingTransaksi) return;
     setLoading(true);
     try {
+      const originalJumlah = parseFloat(editingTransaksi.jumlah as any) || 0;
+      const newJumlah = parseFloat(editFormData.jumlah) || 0;
+      
+      // Pengecekan stok jika transaksi OUTPUT
+      if (editingTransaksi.type === "output") {
+        const delta = newJumlah - originalJumlah;
+        const productName = editFormData.namaProduk.toUpperCase().trim();
+        const currentStokItem = stokData.find(s => s.namaProduk === productName);
+        const currentStok = currentStokItem ? currentStokItem.totalJumlah : 0;
+        
+        // Hitung stok setelah edit: currentStok (which includes originalJumlah being subtracted) minus delta
+        const hypotheticalStok = currentStok - delta;
+        
+        if (hypotheticalStok < 0) {
+          alert(`❌ Stok tidak cukup untuk ${productName}! Stok saat ini: ${currentStok}, butuh: ${newJumlah}`);
+          setLoading(false);
+          return;
+        }
+      }
+      
       // Hitung selisih jumlah untuk update stok
-      const selisihJumlah = parseFloat(editFormData.jumlah) - editingTransaksi.jumlah;
+      const selisihJumlah = newJumlah - originalJumlah;
       
       // Update transaksi
       const trxRef = doc(db, "cabang", cabang, "transaksi", editingTransaksi.id);
       await updateDoc(trxRef, {
         namaProduk: editFormData.namaProduk,
         namaSupplier: editFormData.namaSupplier,
-        jumlah: parseFloat(editFormData.jumlah),
+        jumlah: newJumlah,
         satuan: editFormData.satuan,
         tanggalMasuk: editFormData.tanggalMasuk,
         hargaBeliSatuan: parseFloat(editFormData.hargaBeliSatuan) || 0,
