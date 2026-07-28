@@ -221,13 +221,11 @@ export default function Receipt({
               </div>
             </div>
 
-            {/* Items */}
+            {/* Items - Remove maxHeight restriction so TIDAK PERNAH memotong konten */}
             <div
               className="receipt-items"
               style={{
                 marginTop: "12px",
-                maxHeight: "48vh",
-                overflowY: "auto",
               }}
             >
               {receiptData.items.map((item, idx) => (
@@ -247,8 +245,8 @@ export default function Receipt({
               ))}
             </div>
 
-            {/* Total Section */}
-            <div className="print-total-section">
+            {/* Total Section - SELALU ada di bawah */}
+            <div className="print-total-section" style={{ breakBefore: "auto" }}>
               <div className="print-total-items">
                 <span>Total Item:</span>
                 <span>{receiptData.items.length} item</span>
@@ -270,43 +268,48 @@ export default function Receipt({
           </div>
         </div>
 
-        {/* Preview di Card - Clean & Modern */}
-        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 mb-6 no-print">
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-black text-black mb-1">KOPERASI</h2>
-            <p className="text-sm font-bold text-black">{receiptData.cabang}</p>
-            <div className="h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent mt-2"></div>
+        {/* Preview Summary - Clean */}
+        <div className="bg-gray-50 rounded-xl p-5 mb-6 no-print border border-gray-200">
+          <div className="text-center mb-4 pb-4 border-b border-gray-200">
+            <h2 className="text-xl font-black text-gray-900 mb-1">KOPERASI</h2>
+            <p className="text-sm font-semibold text-gray-700">{receiptData.cabang}</p>
           </div>
 
-          <div className="space-y-3 text-sm text-black">
+          <div className="space-y-2.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-black font-semibold">No. Struk</span>
-              <span className="font-bold">{receiptData.noStruk}</span>
+              <span className="text-gray-600 font-medium">No. Struk</span>
+              <span className="font-bold text-gray-900 font-mono text-xs">{receiptData.noStruk}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-black font-semibold">Total Item</span>
-              <span className="font-bold">{receiptData.items.length} item</span>
+              <span className="text-gray-600 font-medium">Total Item</span>
+              <span className="font-bold text-gray-900">{receiptData.items.length} item</span>
             </div>
-            <div className="flex justify-between items-center bg-white rounded-xl p-3 shadow-sm">
-              <span className="font-bold text-base">TOTAL</span>
-              <span className="font-black text-lg text-blue-600">
+            {tujuanCustomer && (
+              <div className="flex justify-between">
+                <span className="text-gray-600 font-medium">Customer</span>
+                <span className="font-semibold text-gray-900">{tujuanCustomer}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center bg-white rounded-lg p-3 border-2 border-gray-200 mt-3">
+              <span className="font-bold text-gray-900">TOTAL</span>
+              <span className="font-black text-xl text-gray-900">
                 Rp {total.toLocaleString("id-ID")}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Buttons */}
+        {/* Buttons - Clean & Simple */}
         <div className="flex gap-3 no-print">
           <button
             onClick={onPrint}
-            className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3 rounded-2xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+            className="flex-1 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white py-3 rounded-xl font-bold transition-all shadow-sm hover:shadow-md"
           >
             🖨️ Print Struk
           </button>
           <button
             onClick={onClose}
-            className="flex-1 bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-2xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+            className="flex-1 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-800 py-3 rounded-xl font-bold transition-all"
           >
             Tutup
           </button>

@@ -234,41 +234,55 @@ export default function OutputSection({ stokData, customers, namaProdukOutput, s
       </button>
 
       {cart.length > 0 ? (
-        <div className="bg-gray-50 rounded-xl p-5 border-2 border-gray-200">
-          <h4 className="font-bold text-gray-900 mb-3 flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              🛒 Keranjang ({cart.length} item)
+        <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+          <h4 className="font-bold text-gray-900 mb-4 flex items-center justify-between pb-3 border-b-2 border-gray-100">
+            <span className="flex items-center gap-2 text-lg">
+              🛒 Keranjang
+              <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md text-sm font-bold">
+                {cart.length} item
+              </span>
             </span>
-            <span className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded-full font-bold">
-              Total: Rp {totalHargaCart.toLocaleString("id-ID")}
+            <span className="text-base bg-gray-900 text-white px-3 py-1 rounded-md font-bold">
+              Rp {totalHargaCart.toLocaleString("id-ID")}
             </span>
           </h4>
           <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 mb-4">
             {cart.map((item, idx) => {
               const subtotal = item.jumlah * item.hargaSatuan;
               return (
-                <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200">
-                  <div>
-                    <div className="font-semibold text-gray-900">{item.namaProduk}</div>
-                    <div className="text-xs text-gray-600 mt-0.5">
-                      {item.jumlah} {item.satuan} × Rp {item.hargaSatuan.toLocaleString("id-ID")}
-                      <span className="ml-2 font-bold text-gray-900">
-                        = Rp {subtotal.toLocaleString("id-ID")}
+                <div key={idx} className="flex justify-between items-start bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition">
+                  <div className="flex-1 mr-3">
+                    <div className="font-semibold text-gray-900 text-sm line-clamp-2">{item.namaProduk}</div>
+                    <div className="text-xs text-gray-600 mt-1 flex flex-wrap items-center gap-1">
+                      <span className="bg-white px-2 py-0.5 rounded border border-gray-200 font-medium">
+                        {item.jumlah} {item.satuan}
+                      </span>
+                      <span className="text-gray-400">×</span>
+                      <span className="font-medium">
+                        Rp {item.hargaSatuan.toLocaleString("id-ID")}
+                      </span>
+                      <span className="text-gray-400 ml-1">=</span>
+                      <span className="font-bold text-gray-900">
+                        Rp {subtotal.toLocaleString("id-ID")}
                       </span>
                     </div>
                   </div>
-                  <button onClick={() => removeFromCart(idx)} className="text-red-500 hover:text-red-700 font-bold ml-2">
-                    ❌
+                  <button
+                    onClick={() => removeFromCart(idx)}
+                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-md transition font-bold text-lg"
+                    title="Hapus item"
+                  >
+                    ×
                   </button>
                 </div>
               );
             })}
           </div>
 
-          <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-4 mb-4 shadow-lg">
-            <div className="flex justify-between items-center text-white">
-              <span className="font-bold text-base">GRAND TOTAL</span>
-              <span className="font-black text-2xl">
+          <div className="bg-gray-50 rounded-lg p-4 mb-4 border-2 border-gray-100">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-gray-700 text-base">TOTAL HARGA</span>
+              <span className="font-black text-2xl text-gray-900">
                 Rp {totalHargaCart.toLocaleString("id-ID")}
               </span>
             </div>
@@ -277,7 +291,7 @@ export default function OutputSection({ stokData, customers, namaProdukOutput, s
           <button
             onClick={processOutput}
             disabled={loading}
-            className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 disabled:from-gray-300 disabled:to-gray-400 text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="w-full bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white py-4 rounded-xl font-bold text-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
           >
             {loading ? "⏳ Memproses..." : "🧾 Proses & Cetak Struk"}
           </button>

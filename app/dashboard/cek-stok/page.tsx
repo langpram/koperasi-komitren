@@ -1,7 +1,7 @@
 //dashboard/cek-stok/page.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -101,6 +101,17 @@ export default function CekStokPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTransaksi, setEditingTransaksi] = useState<TransaksiItem | null>(null);
   const [editFormData, setEditFormData] = useState<any>({});
+
+  // Expanded group di Kelola Transaksi
+  const [expandedGroupIdsTransaksi, setExpandedGroupIdsTransaksi] = useState<Set<string>>(new Set());
+  const toggleGroupExpandTransaksi = (groupId: string) => {
+    setExpandedGroupIdsTransaksi(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
 
   // State untuk Receipt Print Ulang
   const [showReceipt, setShowReceipt] = useState(false);
@@ -1342,69 +1353,257 @@ export default function CekStokPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filtered.map((item) => (
-                        <tr
-                          key={item.id}
-                          className={`border-b border-gray-100 hover:bg-red-50 transition ${item.type === "output" && item.noStruk ? "bg-blue-50/40" : ""}`}
-                        >
-                          <td className="py-3 px-3 text-xs font-medium text-gray-700">
-                            {formatDate(item.timestamp)}
-                          </td>
-                          <td className="py-3 px-3">
-                            <span
-                              className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                                item.type === "input"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {item.type === "input" ? "📥 IN" : "📤 OUT"}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3 font-mono text-xs font-bold text-gray-700">
-                            {item.noStruk || <span className="text-gray-400">-</span>}
-                          </td>
-                          <td className="py-3 px-3 font-semibold text-gray-900 text-sm">
-                            {item.namaProduk}
-                          </td>
-                          <td className="py-3 px-3 text-gray-700 font-medium text-sm">
-                            {item.type === "input" 
-                              ? (item.namaSupplier || "-") 
-                              : (item.tujuanCustomer || "-")}
-                          </td>
-                          <td className="py-3 px-3 font-bold text-gray-900 text-sm">
-                            {item.jumlah}{" "}
-                            <span className="text-gray-600">{item.satuan}</span>
-                          </td>
-                          <td className="py-3 px-3 text-xs text-gray-600 font-medium">
-                          {item.user}
-                        </td>
-                        <td className="py-3 px-3 flex gap-2 flex-wrap">
-                          {item.type === "output" && (
-                            <button
-                              onClick={() => openStrukFromTransaksi(item)}
-                              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold text-xs transition"
-                            >
-                              🖨️ Cetak Struk
-                            </button>
-                          )}
-                          <button
-                            onClick={() => openEditModal(item)}
-                            className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-bold text-xs transition"
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTransaksi(item.id)}
-                            disabled={deleteLoading === item.id}
-                            className="px-3 py-1.5 bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white rounded-lg font-bold text-xs transition"
-                          >
-                            {deleteLoading === item.id ? "⏳" : "🗑️ Hapus"}
-                          </button>
-                        </td>
-                        </tr>
-                      ))}
-                    </tbody>
+                        {(() => {
+                          // Grouping logic SAMA DENGAN DI BERANDA
+                          type GroupedRow = {
+                            isGroup: true;
+                            groupId: string;
+                            noStruk?: string;
+                            timestamp: any;
+                            user: string;
+                            tujuanCustomer?: string;
+                            items: TransaksiItem[];
+                            totalHarga: number;
+                            totalJumlah: number;
+                            totalItemsCount: number;
+                            representative: TransaksiItem;
+                          };
+                          type SingleRow = {
+                            isGroup: false;
+                            item: TransaksiItem;
+                          };
+                          type Row = GroupedRow | SingleRow;
+
+                          const processedNoStruk = new Set<string>();
+                          const rows: Row[] = [];
+
+                          filtered.forEach((item) => {
+                            const noStruk = item.noStruk;
+                            if (item.type === "output" && noStruk) {
+                              if (processedNoStruk.has(noStruk)) return;
+                              const groupItems = filtered.filter(
+                                (t) => t.noStruk === noStruk && t.type === "output"
+                              );
+                              if (groupItems.length === 0) return;
+                              const rep = groupItems[0];
+                              const totalHarga = groupItems.reduce(
+                                (sum, it) =>
+                                  sum +
+                                  (parseFloat(it.jumlah as any) || 0) *
+                                    (parseFloat(it.hargaJualSatuan as any) || 0),
+                                0
+                              );
+                              const totalJumlah = groupItems.reduce(
+                                (sum, it) => sum + (parseFloat(it.jumlah as any) || 0),
+                                0
+                              );
+                              processedNoStruk.add(noStruk);
+                              rows.push({
+                                isGroup: true,
+                                groupId: `group-trans-${noStruk}`,
+                                noStruk,
+                                timestamp: rep.timestamp,
+                                user: rep.user,
+                                tujuanCustomer: rep.tujuanCustomer,
+                                items: groupItems,
+                                totalHarga,
+                                totalJumlah,
+                                totalItemsCount: groupItems.length,
+                                representative: rep,
+                              });
+                            } else {
+                              rows.push({ isGroup: false, item });
+                            }
+                          });
+
+                          return rows.map((row) => {
+                            // ============== ROW SINGLE ==============
+                            if (!row.isGroup) {
+                              const item = row.item;
+                              return (
+                                <tr
+                                  key={item.id}
+                                  className="border-b border-gray-100 hover:bg-red-50 transition"
+                                >
+                                  <td className="py-3 px-3 text-xs font-medium text-gray-700">
+                                    {formatDate(item.timestamp)}
+                                  </td>
+                                  <td className="py-3 px-3">
+                                    <span
+                                      className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                                        item.type === "input"
+                                          ? "bg-green-100 text-green-700"
+                                          : "bg-red-100 text-red-700"
+                                      }`}
+                                    >
+                                      {item.type === "input" ? "📥 IN" : "📤 OUT"}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-3 font-mono text-xs font-bold text-gray-700">
+                                    {item.noStruk || <span className="text-gray-400">-</span>}
+                                  </td>
+                                  <td className="py-3 px-3 font-semibold text-gray-900 text-sm">
+                                    {item.namaProduk}
+                                  </td>
+                                  <td className="py-3 px-3 text-gray-700 font-medium text-sm">
+                                    {item.type === "input" 
+                                      ? (item.namaSupplier || "-") 
+                                      : (item.tujuanCustomer || "-")}
+                                  </td>
+                                  <td className="py-3 px-3 font-bold text-gray-900 text-sm">
+                                    {item.jumlah}{" "}
+                                    <span className="text-gray-600">{item.satuan}</span>
+                                  </td>
+                                  <td className="py-3 px-3 text-xs text-gray-600 font-medium">
+                                    {item.user}
+                                  </td>
+                                  <td className="py-3 px-3 flex gap-2 flex-wrap">
+                                    {item.type === "output" && (
+                                      <button
+                                        onClick={() => openStrukFromTransaksi(item)}
+                                        className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold text-xs transition"
+                                      >
+                                        🖨️ Cetak Struk
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => openEditModal(item)}
+                                      className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-bold text-xs transition"
+                                    >
+                                      ✏️ Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteTransaksi(item.id)}
+                                      disabled={deleteLoading === item.id}
+                                      className="px-3 py-1.5 bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white rounded-lg font-bold text-xs transition"
+                                    >
+                                      {deleteLoading === item.id ? "⏳" : "🗑️ Hapus"}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            }
+
+                            // ============== ROW GROUP ==============
+                            const isExpanded = expandedGroupIdsTransaksi.has(row.groupId);
+                            return (
+                              <React.Fragment key={row.groupId}>
+                                <tr className={`border-b border-gray-200 transition ${isExpanded ? "bg-blue-50" : "bg-gray-50 hover:bg-gray-100"}`}>
+                                  <td className="py-3 px-3 text-xs text-gray-700 whitespace-nowrap">
+                                    {formatDate(row.timestamp)}
+                                  </td>
+                                  <td className="py-3 px-3">
+                                    <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-red-100 text-red-700 border border-red-200">
+                                      📤 OUT {row.totalItemsCount}x
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-3 font-mono text-[11px] font-bold text-blue-700 whitespace-nowrap">
+                                    {row.noStruk}
+                                  </td>
+                                  <td className="py-3 px-3">
+                                    <div className="font-semibold text-gray-900 text-xs mb-0.5">
+                                      {row.items[0].namaProduk.length > 22
+                                        ? row.items[0].namaProduk.slice(0, 22) + "…"
+                                        : row.items[0].namaProduk}
+                                      {row.items.length > 1 && (
+                                        <span className="text-[10px] text-gray-500 font-medium ml-1">
+                                          (+{row.items.length - 1})
+                                        </span>
+                                      )}
+                                    </div>
+                                   {isExpanded && (
+                                      <div className="space-y-0.5 mt-1.5">
+                                        {row.items.map((it, i) => (
+                                          <div key={i} className="text-[11px] text-gray-600">
+                                            • {it.namaProduk}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="py-3 px-3 text-gray-800 font-medium text-xs">
+                                    {row.tujuanCustomer ? (
+                                      row.tujuanCustomer.length > 15
+                                        ? row.tujuanCustomer.slice(0, 15) + "…"
+                                        : row.tujuanCustomer
+                                    ) : "-"}
+                                  </td>
+                                  <td className="py-3 px-3 font-bold text-gray-900 text-xs whitespace-nowrap">
+                                    {row.totalJumlah}
+                                  </td>
+                                  <td className="py-3 px-3 text-[11px] text-gray-600">
+                                    {row.user}
+                                  </td>
+                                  <td className="py-3 px-3">
+                                    <div className="flex gap-1 flex-wrap">
+                                      <button
+                                        onClick={() => toggleGroupExpandTransaksi(row.groupId)}
+                                        className={`px-2 py-1 rounded-md text-[10px] font-semibold transition ${
+                                          isExpanded
+                                            ? "bg-gray-700 hover:bg-gray-800 text-white"
+                                            : "bg-gray-200 hover:bg-gray-300 text-gray-800"
+                                        }`}
+                                      >
+                                        {isExpanded ? "🔼" : "🔽"}
+                                      </button>
+                                      <button
+                                        onClick={() => openStrukFromTransaksi(row.representative)}
+                                        className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-[10px] font-semibold transition"
+                                      >
+                                        🖨️
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                {isExpanded && row.items.map((it, idx) => (
+                                  <tr
+                                    key={`${row.groupId}-item-${idx}`}
+                                    className="border-b border-gray-100 bg-white hover:bg-gray-50 transition"
+                                  >
+                                    <td colSpan={2} className="py-2 px-3 pl-6 text-[10px] text-gray-400 whitespace-nowrap">
+                                      ↳ #{idx + 1}
+                                    </td>
+                                    <td className="py-2 px-3 font-mono text-[9px] text-gray-400">
+                                      {it.id.slice(0, 6)}…
+                                    </td>
+                                    <td className="py-2 px-3 font-medium text-gray-800 text-xs">
+                                      {it.namaProduk}
+                                    </td>
+                                    <td className="py-2 px-3 text-gray-500 text-[10px]">
+                                      {row.tujuanCustomer ? (
+                                        row.tujuanCustomer.length > 10
+                                          ? row.tujuanCustomer.slice(0, 10) + "…"
+                                          : row.tujuanCustomer
+                                      ) : "-"}
+                                    </td>
+                                    <td className="py-2 px-3 font-semibold text-gray-800 text-xs whitespace-nowrap">
+                                      {it.jumlah} {it.satuan}
+                                    </td>
+                                    <td className="py-2 px-3 text-[10px] text-gray-500">
+                                      {it.user}
+                                    </td>
+                                    <td className="py-2 px-3 flex gap-1 flex-wrap">
+                                      <button
+                                        onClick={() => openEditModal(it)}
+                                        className="px-2 py-0.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-[10px] font-semibold transition"
+                                      >
+                                        ✏️
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteTransaksi(it.id)}
+                                        disabled={deleteLoading === it.id}
+                                        className="px-2 py-0.5 bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white rounded text-[10px] font-semibold transition"
+                                      >
+                                        {deleteLoading === it.id ? "⏳" : "🗑️"}
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </React.Fragment>
+                            );
+                          });
+                        })()}
+                      </tbody>
                   </table>
                 </div>
                 );

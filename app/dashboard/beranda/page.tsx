@@ -1,7 +1,7 @@
 //dashboard/beranda/page.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -88,6 +88,17 @@ export default function BerandaPage() {
   const [riwayatReceiptData, setRiwayatReceiptData] = useState<ReceiptData | null>(null);
   const [riwayatTujuanCustomer, setRiwayatTujuanCustomer] = useState("");
   const riwayatReceiptRef = useRef<HTMLDivElement>(null!);
+
+  // Expanded group di riwayat
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
+  const toggleGroupExpand = (groupId: string) => {
+    setExpandedGroupIds(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
 
   // Autocomplete
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -1158,75 +1169,280 @@ export default function BerandaPage() {
                   );
                 }
 
-                return filtered.map((item) => (
-                  <tr
-                    key={item.id}
-                    className={`border-b border-gray-100 hover:bg-blue-50 transition ${item.type === "output" && (item as any).noStruk ? "bg-blue-50/40" : ""}`}
-                  >
-                    <td className="py-4 px-4 text-sm font-medium text-gray-700">
-                      {formatDate(item.timestamp)}
-                    </td>
-                    <td className="py-4 px-4">
-                      <span
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
-                          item.type === "input"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
+                // ========== GROUPING LOGIC: Output dengan noStruk digabung jadi 1 baris ==========
+                type GroupedRow = {
+                  isGroup: true; // <-- LITERAL TRUE, biar TS narrows otomatis!
+                  groupId: string;
+                  noStruk?: string;
+                  timestamp: any;
+                  user: string;
+                  tujuanCustomer?: string;
+                  items: TransaksiItem[];
+                  totalHarga: number;
+                  totalJumlah: number;
+                  totalItemsCount: number;
+                  representative: TransaksiItem;
+                };
+
+                type SingleRow = {
+                  isGroup: false;
+                  item: TransaksiItem;
+                };
+
+                type Row = GroupedRow | SingleRow;
+
+                const processedNoStruk = new Set<string>();
+                const rows: Row[] = [];
+
+                filtered.forEach((item) => {
+                  const noStruk = (item as any).noStruk;
+
+                  // Kalau OUTPUT dan punya noStruk: bikin group
+                  if (item.type === "output" && noStruk) {
+                    if (processedNoStruk.has(noStruk)) return; // Skip karena sudah diproses groupnya
+
+                    // Ambil SEMUA item dengan noStruk yang SAMA (dari DATA FILTERED)
+                    const groupItems = filtered.filter(
+                      (t) => (t as any).noStruk === noStruk && t.type === "output"
+                    );
+                    if (groupItems.length === 0) return;
+
+                    const rep = groupItems[0];
+                    const totalHarga = groupItems.reduce(
+                      (sum, it) =>
+                        sum +
+                        (parseFloat(it.jumlah as any) || 0) *
+                          (parseFloat(it.hargaJualSatuan as any) || 0),
+                      0
+                    );
+                    const totalJumlah = groupItems.reduce(
+                      (sum, it) => sum + (parseFloat(it.jumlah as any) || 0),
+                      0
+                    );
+
+                    processedNoStruk.add(noStruk);
+
+                    rows.push({
+                      isGroup: true,
+                      groupId: `group-${noStruk}`,
+                      noStruk,
+                      timestamp: rep.timestamp,
+                      user: rep.user,
+                      tujuanCustomer: (rep as any).tujuanCustomer,
+                      items: groupItems,
+                      totalHarga,
+                      totalJumlah,
+                      totalItemsCount: groupItems.length,
+                      representative: rep,
+                    });
+                  } else {
+                    // Transaksi INPUT / OUTPUT tanpa noStruk: single row
+                    rows.push({
+                      isGroup: false,
+                      item,
+                    });
+                  }
+                });
+
+                return rows.map((row) => {
+                  // ================== ROW: Single Item (INPUT / OUTPUT tanpa noStruk) ==================
+                  if (!row.isGroup) {
+                    const item = row.item;
+                    return (
+                      <tr
+                        key={item.id}
+                        className="border-b border-gray-100 hover:bg-blue-50 transition"
                       >
-                        {item.type === "input" ? "📥 INPUT" : "📤 OUTPUT"}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 font-mono text-xs font-bold text-gray-700 whitespace-nowrap">
-                      {(item as any).noStruk || <span className="text-gray-400">-</span>}
-                    </td>
-                    <td className="py-4 px-4 font-semibold text-gray-900">
-                      {item.namaProduk}
-                    </td>
-                    <td className="py-4 px-4 text-gray-700 font-medium">
-                      {item.type === "input" 
-                        ? (item.namaSupplier || "-") 
-                        : ((item as any).tujuanCustomer || "-")}
-                    </td>
-                    <td className="py-4 px-4 font-bold text-gray-900">
-                      {item.jumlah}{" "}
-                      <span className="text-gray-600 font-semibold">
-                        {item.satuan || ""}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-gray-700 font-medium">
-                      {typeof item.hargaBeliSatuan === "number"
-                        ? item.hargaBeliSatuan.toLocaleString("id-ID")
-                        : "-"}
-                    </td>
-                    <td className="py-4 px-4 text-gray-700 font-medium">
-                      {typeof item.hargaJualSatuan === "number"
-                        ? item.hargaJualSatuan.toLocaleString("id-ID")
-                        : "-"}
-                    </td>
-                    <td className="py-4 px-4 text-sm text-gray-600 font-medium">
-                      {item.user}
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => openEditModal(item)}
-                          className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-bold transition"
-                        >
-                          ✏️ Edit
-                        </button>
-                        {item.type === "output" && (
-                          <button
-                            onClick={() => openRiwayatReceipt(item)}
-                            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition"
+                        <td className="py-4 px-4 text-sm font-medium text-gray-700">
+                          {formatDate(item.timestamp)}
+                        </td>
+                        <td className="py-4 px-4">
+                          <span
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
+                              item.type === "input"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
                           >
-                            🖨️ Cetak
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ));
+                            {item.type === "input" ? "📥 INPUT" : "📤 OUTPUT"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 font-mono text-xs font-bold text-gray-700 whitespace-nowrap">
+                          {(item as any).noStruk || <span className="text-gray-400">-</span>}
+                        </td>
+                        <td className="py-4 px-4 font-semibold text-gray-900">
+                          {item.namaProduk}
+                        </td>
+                        <td className="py-4 px-4 text-gray-700 font-medium">
+                          {item.type === "input" 
+                            ? (item.namaSupplier || "-") 
+                            : ((item as any).tujuanCustomer || "-")}
+                        </td>
+                        <td className="py-4 px-4 font-bold text-gray-900">
+                          {item.jumlah}{" "}
+                          <span className="text-gray-600 font-semibold">
+                            {item.satuan || ""}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-gray-700 font-medium">
+                          {typeof item.hargaBeliSatuan === "number"
+                            ? item.hargaBeliSatuan.toLocaleString("id-ID")
+                            : "-"}
+                        </td>
+                        <td className="py-4 px-4 text-gray-700 font-medium">
+                          {typeof item.hargaJualSatuan === "number"
+                            ? item.hargaJualSatuan.toLocaleString("id-ID")
+                            : "-"}
+                        </td>
+                        <td className="py-4 px-4 text-sm text-gray-600 font-medium">
+                          {item.user}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex gap-2 flex-wrap">
+                            <button
+                              onClick={() => openEditModal(item)}
+                              className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-bold transition"
+                            >
+                              ✏️ Edit
+                            </button>
+                            {item.type === "output" && (
+                              <button
+                                onClick={() => openRiwayatReceipt(item)}
+                                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition"
+                              >
+                                🖨️ Cetak
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  // ================== ROW: GROUP OUTPUT (per noStruk) ==================
+                  const isExpanded = expandedGroupIds.has(row.groupId);
+
+                  return (
+                    <React.Fragment key={row.groupId}>
+                      {/* Summary Row: 1 baris untuk invoice / 1 no struk - CLEAN DESIGN */}
+                      <tr className={`border-b border-gray-200 transition ${isExpanded ? "bg-blue-50" : "bg-gray-50 hover:bg-gray-100"}`}>
+                        <td className="py-3 px-4 text-sm text-gray-700 whitespace-nowrap">
+                          {formatDate(row.timestamp)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-3 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                            📤 OUT ({row.totalItemsCount})
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-xs font-bold text-blue-700 whitespace-nowrap">
+                          {row.noStruk}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-gray-900 text-sm mb-1 line-clamp-1">
+                            {row.items[0].namaProduk}
+                            {row.items.length > 1 && (
+                              <span className="text-xs text-gray-500 font-medium ml-1">
+                                +{row.items.length - 1} lainnya
+                              </span>
+                            )}
+                          </div>
+                          {isExpanded && (
+                            <div className="space-y-0.5 mt-2">
+                              {row.items.map((it, i) => (
+                                <div key={i} className="text-xs text-gray-600">
+                                  • {it.namaProduk}{" "}
+                                  <span className="text-gray-500">
+                                    ({it.jumlah} {it.satuan})
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-gray-800 font-medium text-sm">
+                          {row.tujuanCustomer || "-"}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-gray-900 text-sm whitespace-nowrap">
+                          {row.totalJumlah} unit
+                        </td>
+                        <td className="py-3 px-4 text-xs text-gray-500">
+                          -
+                        </td>
+                        <td className="py-3 px-4 font-bold text-gray-900 whitespace-nowrap">
+                          Rp {row.totalHarga.toLocaleString("id-ID")}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-gray-600">
+                          {row.user}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-1.5 flex-wrap">
+                            <button
+                              onClick={() => toggleGroupExpand(row.groupId)}
+                              className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition ${
+                                isExpanded
+                                  ? "bg-gray-700 hover:bg-gray-800 text-white"
+                                  : "bg-gray-200 hover:bg-gray-300 text-gray-800"
+                              }`}
+                            >
+                              {isExpanded ? "🔼" : "🔽"}
+                            </button>
+                            <button
+                              onClick={() => openRiwayatReceipt(row.representative)}
+                              className="px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-semibold transition"
+                            >
+                              🖨️ Cetak
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Expandable Detail Items - CLEAN SUB ROWS */}
+                      {isExpanded && row.items.map((it, idx) => (
+                        <tr
+                          key={`${row.groupId}-item-${idx}`}
+                          className="border-b border-gray-100 bg-white hover:bg-gray-50 transition"
+                        >
+                          <td className="py-2 px-4 pl-10 text-[11px] text-gray-400 whitespace-nowrap" colSpan={2}>
+                            ↳ Item #{idx + 1}
+                          </td>
+                          <td className="py-2 px-4 font-mono text-[10px] text-gray-400">
+                            {it.id.slice(0, 8)}…
+                          </td>
+                          <td className="py-2 px-4 font-medium text-gray-800 text-xs">
+                            {it.namaProduk}
+                          </td>
+                          <td className="py-2 px-4 text-gray-500 text-xs">
+                            -
+                          </td>
+                          <td className="py-2 px-4 font-semibold text-gray-800 text-xs whitespace-nowrap">
+                            {it.jumlah} {it.satuan || ""}
+                          </td>
+                          <td className="py-2 px-4 text-gray-600 text-xs whitespace-nowrap">
+                            {typeof it.hargaBeliSatuan === "number"
+                              ? it.hargaBeliSatuan.toLocaleString("id-ID")
+                              : "-"}
+                          </td>
+                          <td className="py-2 px-4 text-gray-700 font-semibold text-xs whitespace-nowrap">
+                            {typeof it.hargaJualSatuan === "number"
+                              ? it.hargaJualSatuan.toLocaleString("id-ID")
+                              : "-"}
+                          </td>
+                          <td className="py-2 px-4 text-[10px] text-gray-500">
+                            {it.user}
+                          </td>
+                          <td className="py-2 px-4">
+                            <button
+                              onClick={() => openEditModal(it)}
+                              className="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-[10px] font-semibold transition"
+                            >
+                              ✏️ Edit
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                });
               })()}
             </tbody>
           </table>
