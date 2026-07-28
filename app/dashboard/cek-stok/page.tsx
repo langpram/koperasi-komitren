@@ -1,7 +1,7 @@
 //dashboard/cek-stok/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -13,12 +13,28 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import * as XLSX from "xlsx";
+import Receipt from "@/components/beranda/Receipt";
 
 interface StokItem {
   namaProduk: string;
   totalJumlah: number;
   satuan: string;
   suppliers: { nama: string; jumlah: number }[];
+}
+
+interface CartItem {
+  namaProduk: string;
+  jumlah: number;
+  satuan: string;
+  hargaSatuan: number;
+}
+
+interface ReceiptData {
+  cabang: string;
+  items: CartItem[];
+  user: string;
+  timestamp: Date;
+  noStruk: string;
 }
 
 interface TransaksiItem {
@@ -35,6 +51,7 @@ interface TransaksiItem {
   hargaJualSatuan?: number;
   tanggalMasuk?: string;
   tujuanCustomer?: string;
+  noStruk?: string;
 }
 
 // Tambah nama bulan untuk dropdown laporan bulanan
@@ -85,6 +102,12 @@ export default function CekStokPage() {
   const [editingTransaksi, setEditingTransaksi] = useState<TransaksiItem | null>(null);
   const [editFormData, setEditFormData] = useState<any>({});
 
+  // State untuk Receipt Print Ulang
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+  const [receiptTujuanCustomer, setReceiptTujuanCustomer] = useState<string>("");
+  const receiptRef = useRef<HTMLDivElement>(null!);
+
   useEffect(() => {
     const storedCabang = localStorage.getItem("cabang") || "";
     setCabang(storedCabang);
@@ -104,13 +127,31 @@ export default function CekStokPage() {
     const q = query(collection(db, "cabang", cabangName, "transaksi"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      let transaksi = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      let transaksi: TransaksiItem[] = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as TransaksiItem));
       console.log("📊 All transaksi docs:", transaksi);
       
       // Sort transactions by timestamp ascending (oldest first)
       transaksi.sort((a, b) => {
-        const timeA = a.timestamp?.toMillis?.() || 0;
-        const timeB = b.timestamp?.toMillis?.() || 0;
+        const getMillis = (t: any): number => {
+          if (!t) return 0;
+          if (typeof t === "number") return t;
+          if (typeof t === "object") {
+            const maybeFn = (t as any).toMillis;
+            if (typeof maybeFn === "function") {
+              try { return maybeFn.call(t); } catch { return 0; }
+            }
+            const seconds = (t as any).seconds;
+            if (typeof seconds === "number") return seconds * 1000;
+            if (t instanceof Date) return t.getTime();
+          }
+          if (typeof t === "string") {
+            const parsed = Date.parse(t);
+            return Number.isFinite(parsed) ? parsed : 0;
+          }
+          return 0;
+        };
+        const timeA = getMillis(a.timestamp);
+        const timeB = getMillis(b.timestamp);
         return timeA - timeB;
       });
       
@@ -731,6 +772,63 @@ export default function CekStokPage() {
     });
   };
 
+  // ====== FUNGSI CETAK ULANG STRUK BERDASARKAN NO STRUK ======
+  const openStrukFromTransaksi = (item: TransaksiItem) => {
+    if (item.type !== "output") return;
+
+    let itemsForReceipt: TransaksiItem[] = [];
+    let finalNoStruk = "";
+    let finalTujuanCustomer = item.tujuanCustomer || "";
+    let finalUser = item.user;
+    let finalTimestamp = item.timestamp;
+
+    if (item.noStruk) {
+      // Kalau ada noStruk, ambil SEMUA transaksi dengan noStruk yang SAMA!
+      itemsForReceipt = transaksiList.filter(t => t.noStruk === item.noStruk && t.type === "output");
+      finalNoStruk = item.noStruk;
+      // Ambil tujuanCustomer & user dari item pertama yang ada
+      const representative = itemsForReceipt[0] || item;
+      finalTujuanCustomer = representative.tujuanCustomer || "";
+      finalUser = representative.user;
+      finalTimestamp = representative.timestamp;
+    } else {
+      // Transaksi lama (tanpa noStruk): cuma satu item
+      itemsForReceipt = [item];
+      finalNoStruk = `OUT-${item.id}`;
+    }
+
+    // Convert ke CartItem buat Receipt
+    const cartItems: CartItem[] = itemsForReceipt.map(t => ({
+      namaProduk: t.namaProduk,
+      jumlah: parseFloat(t.jumlah as any) || 0,
+      satuan: t.satuan,
+      hargaSatuan: parseFloat(t.hargaJualSatuan as any) || 0,
+    }));
+
+    const receipt: ReceiptData = {
+      cabang: cabang,
+      items: cartItems,
+      user: finalUser,
+      timestamp: finalTimestamp?.toDate?.() || new Date(finalTimestamp as any),
+      noStruk: finalNoStruk,
+    };
+
+    setReceiptData(receipt);
+    setReceiptTujuanCustomer(finalTujuanCustomer);
+    setShowReceipt(true);
+  };
+
+  const printReceipt = () => {
+    window.print();
+    setTimeout(() => setShowReceipt(false), 500);
+  };
+
+  const closeReceipt = () => {
+    setShowReceipt(false);
+    setReceiptData(null);
+    setReceiptTujuanCustomer("");
+  };
+
   // Filter berdasarkan search
   const filteredStok = stokData.filter((item) =>
     item.namaProduk.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1195,6 +1293,8 @@ export default function CekStokPage() {
                   return (
                     item.namaProduk.toLowerCase().includes(q) ||
                     (item.namaSupplier && item.namaSupplier.toLowerCase().includes(q)) ||
+                    (item.tujuanCustomer && item.tujuanCustomer.toLowerCase().includes(q)) ||
+                    (item.noStruk && item.noStruk.toLowerCase().includes(q)) ||
                     item.user.toLowerCase().includes(q)
                   );
                 });
@@ -1222,10 +1322,13 @@ export default function CekStokPage() {
                             Type
                           </th>
                           <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
+                            No. Struk
+                          </th>
+                          <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
                             Produk
                           </th>
                           <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
-                            Supplier
+                            Supplier/Customer
                           </th>
                           <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">
                             Jumlah
@@ -1242,7 +1345,7 @@ export default function CekStokPage() {
                         {filtered.map((item) => (
                         <tr
                           key={item.id}
-                          className="border-b border-gray-100 hover:bg-red-50 transition"
+                          className={`border-b border-gray-100 hover:bg-red-50 transition ${item.type === "output" && item.noStruk ? "bg-blue-50/40" : ""}`}
                         >
                           <td className="py-3 px-3 text-xs font-medium text-gray-700">
                             {formatDate(item.timestamp)}
@@ -1258,11 +1361,16 @@ export default function CekStokPage() {
                               {item.type === "input" ? "📥 IN" : "📤 OUT"}
                             </span>
                           </td>
+                          <td className="py-3 px-3 font-mono text-xs font-bold text-gray-700">
+                            {item.noStruk || <span className="text-gray-400">-</span>}
+                          </td>
                           <td className="py-3 px-3 font-semibold text-gray-900 text-sm">
                             {item.namaProduk}
                           </td>
                           <td className="py-3 px-3 text-gray-700 font-medium text-sm">
-                            {item.namaSupplier || "-"}
+                            {item.type === "input" 
+                              ? (item.namaSupplier || "-") 
+                              : (item.tujuanCustomer || "-")}
                           </td>
                           <td className="py-3 px-3 font-bold text-gray-900 text-sm">
                             {item.jumlah}{" "}
@@ -1271,7 +1379,15 @@ export default function CekStokPage() {
                           <td className="py-3 px-3 text-xs text-gray-600 font-medium">
                           {item.user}
                         </td>
-                        <td className="py-3 px-3 flex gap-2">
+                        <td className="py-3 px-3 flex gap-2 flex-wrap">
+                          {item.type === "output" && (
+                            <button
+                              onClick={() => openStrukFromTransaksi(item)}
+                              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold text-xs transition"
+                            >
+                              🖨️ Cetak Struk
+                            </button>
+                          )}
                           <button
                             onClick={() => openEditModal(item)}
                             className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-bold text-xs transition"
@@ -1421,6 +1537,17 @@ export default function CekStokPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Receipt Print Ulang */}
+      {showReceipt && receiptData && (
+        <Receipt
+          receiptData={receiptData}
+          receiptRef={receiptRef}
+          tujuanCustomer={receiptTujuanCustomer}
+          onPrint={printReceipt}
+          onClose={closeReceipt}
+        />
       )}
     </div>
   );

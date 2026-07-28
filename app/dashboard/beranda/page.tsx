@@ -553,6 +553,9 @@ export default function BerandaPage() {
     setLoading(true);
 
     try {
+      // Generate NO STRUK DULU, biar semua item dalam keranjang punya nomor struk YANG SAMA!
+      const noStrukBaru = `OUT-${Date.now()}`;
+
       // Helper: ambil harga dari transaksi INPUT terakhir
       const getLatestPrices = (productName: string) => {
         const inputItems = riwayat.filter(
@@ -594,7 +597,7 @@ export default function BerandaPage() {
         };
       };
 
-      // Simpan setiap item ke Firestore dengan harga
+      // Simpan setiap item ke Firestore dengan harga DAN NO STRUK YANG SAMA!
       const promises = cart.map((item) => {
         const prices = getLatestPrices(item.namaProduk);
         return addDoc(collection(db, "cabang", cabang, "transaksi"), {
@@ -607,6 +610,7 @@ export default function BerandaPage() {
           tujuanCustomer,
           timestamp: serverTimestamp(),
           user: username,
+          noStruk: noStrukBaru, // <-- NOMOR STRUK DISIMPAN KE FIRESTORE!
         });
       });
 
@@ -618,7 +622,7 @@ export default function BerandaPage() {
         items: cart,
         user: username,
         timestamp: new Date(),
-        noStruk: `OUT-${Date.now()}`,
+        noStruk: noStrukBaru,
       };
 
       setReceiptData(receipt);
@@ -649,26 +653,51 @@ export default function BerandaPage() {
     setTimeout(() => setShowRiwayatReceipt(false), 500);
   };
   
-  // BUKA STRUK DARI RIWAYAT
+  // BUKA STRUK DARI RIWAYAT - GABUNG BERDASARKAN NO STRUK!
   const openRiwayatReceipt = (item: TransaksiItem) => {
-    // Buat receipt data dari transaksi item
+    if (item.type !== "output") return;
+
+    let itemsForReceipt: TransaksiItem[] = [];
+    let finalNoStruk = "";
+    let finalTujuanCustomer = (item as any).tujuanCustomer || "";
+    let finalUser = item.user;
+    let finalTimestamp = item.timestamp;
+
+    if ((item as any).noStruk) {
+      // Kalau ada noStruk, ambil SEMUA transaksi dengan noStruk yang SAMA!
+      itemsForReceipt = riwayat.filter(t => 
+        (t as any).noStruk === (item as any).noStruk && t.type === "output"
+      );
+      finalNoStruk = (item as any).noStruk;
+      // Ambil data representative dari item pertama
+      const representative = itemsForReceipt[0] || item;
+      finalTujuanCustomer = (representative as any).tujuanCustomer || "";
+      finalUser = representative.user;
+      finalTimestamp = representative.timestamp;
+    } else {
+      // Transaksi lama (tanpa noStruk): cuma 1 item
+      itemsForReceipt = [item];
+      finalNoStruk = `OUT-${item.id}`;
+    }
+
+    // Convert ke CartItem buat Receipt
+    const cartItems: CartItem[] = itemsForReceipt.map(t => ({
+      namaProduk: t.namaProduk,
+      jumlah: parseFloat(t.jumlah as any) || 0,
+      satuan: t.satuan,
+      hargaSatuan: parseFloat(t.hargaJualSatuan as any) || 0,
+    }));
+
     const receipt: ReceiptData = {
       cabang: cabang,
-      items: [
-        {
-          namaProduk: item.namaProduk,
-          jumlah: item.jumlah,
-          satuan: item.satuan,
-          hargaSatuan: item.hargaJualSatuan || 0
-        }
-      ],
-      user: item.user,
-      timestamp: item.timestamp?.toDate?.() || new Date(item.timestamp),
-      noStruk: `OUT-${item.id}`
+      items: cartItems,
+      user: finalUser,
+      timestamp: finalTimestamp?.toDate?.() || new Date(finalTimestamp as any),
+      noStruk: finalNoStruk,
     };
-    
+
     setRiwayatReceiptData(receipt);
-    setRiwayatTujuanCustomer((item as any).tujuanCustomer || "");
+    setRiwayatTujuanCustomer(finalTujuanCustomer);
     setShowRiwayatReceipt(true);
   };
 
@@ -1054,10 +1083,10 @@ export default function BerandaPage() {
           <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
             <input
               type="text"
-              placeholder="🔍 Cari nama produk, supplier, atau user..."
+              placeholder="🔍 Cari nama produk, supplier, no struk, customer, atau user..."
               value={searchRiwayat}
               onChange={(e) => setSearchRiwayat(e.target.value)}
-              className="w-full md:w-80 px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
+              className="w-full md:w-96 px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-gray-900"
             />
             <button
               onClick={() => setIsExportModalOpen(true)}
@@ -1078,10 +1107,13 @@ export default function BerandaPage() {
                   Type
                 </th>
                 <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  No. Struk
+                </th>
+                <th className="text-left py-4 px-4 font-bold text-gray-900">
                   Produk
                 </th>
                 <th className="text-left py-4 px-4 font-bold text-gray-900">
-                  Supplier
+                  Supplier/Customer
                 </th>
                 <th className="text-left py-4 px-4 font-bold text-gray-900">
                   Jumlah
@@ -1107,6 +1139,8 @@ export default function BerandaPage() {
                   return (
                     item.namaProduk.toLowerCase().includes(search) ||
                     (item.namaSupplier && item.namaSupplier.toLowerCase().includes(search)) ||
+                    ((item as any).tujuanCustomer && String((item as any).tujuanCustomer).toLowerCase().includes(search)) ||
+                    ((item as any).noStruk && String((item as any).noStruk).toLowerCase().includes(search)) ||
                     item.user.toLowerCase().includes(search)
                   );
                 });
@@ -1114,7 +1148,7 @@ export default function BerandaPage() {
                 if (filtered.length === 0) {
                   return (
                     <tr>
-                      <td colSpan={9} className="text-center py-12 text-gray-500">
+                      <td colSpan={10} className="text-center py-12 text-gray-500">
                         <div className="text-5xl mb-3">📦</div>
                         <div className="font-medium">
                           {searchRiwayat ? "Transaksi tidak ditemukan" : "Belum ada transaksi"}
@@ -1127,7 +1161,7 @@ export default function BerandaPage() {
                 return filtered.map((item) => (
                   <tr
                     key={item.id}
-                    className="border-b border-gray-100 hover:bg-blue-50 transition"
+                    className={`border-b border-gray-100 hover:bg-blue-50 transition ${item.type === "output" && (item as any).noStruk ? "bg-blue-50/40" : ""}`}
                   >
                     <td className="py-4 px-4 text-sm font-medium text-gray-700">
                       {formatDate(item.timestamp)}
@@ -1143,11 +1177,16 @@ export default function BerandaPage() {
                         {item.type === "input" ? "📥 INPUT" : "📤 OUTPUT"}
                       </span>
                     </td>
+                    <td className="py-4 px-4 font-mono text-xs font-bold text-gray-700 whitespace-nowrap">
+                      {(item as any).noStruk || <span className="text-gray-400">-</span>}
+                    </td>
                     <td className="py-4 px-4 font-semibold text-gray-900">
                       {item.namaProduk}
                     </td>
                     <td className="py-4 px-4 text-gray-700 font-medium">
-                      {item.namaSupplier || "-"}
+                      {item.type === "input" 
+                        ? (item.namaSupplier || "-") 
+                        : ((item as any).tujuanCustomer || "-")}
                     </td>
                     <td className="py-4 px-4 font-bold text-gray-900">
                       {item.jumlah}{" "}
@@ -1169,7 +1208,7 @@ export default function BerandaPage() {
                       {item.user}
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <button
                           onClick={() => openEditModal(item)}
                           className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-bold transition"
