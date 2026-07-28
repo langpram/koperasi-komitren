@@ -125,6 +125,9 @@ function CustomDropdown({ value, onChange, options, placeholder, icon }: any) {
 }
 
 export default function OutputSection({ stokData, customers, namaProdukOutput, setNamaProdukOutput, jumlahOutput, setJumlahOutput, satuanOutput, setSatuanOutput, satuanOptions, customSatuan, setCustomSatuan, handleAddSatuan, tujuanCustomer, setTujuanCustomer, getAvailableFor, addToCart, cart, removeFromCart, processOutput, loading }: Props) {
+  const [productSearch, setProductSearch] = useState(namaProdukOutput);
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+
   const customerOptions = customers.map(c => ({
     value: c.nama,
     label: c.nama
@@ -138,6 +141,22 @@ export default function OutputSection({ stokData, customers, namaProdukOutput, s
       label: s.namaProduk,
       badge: `${s.totalJumlah} ${s.satuan}`
     }));
+
+  const filteredProductOptions = productOptions.filter((opt) =>
+    opt.label.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  useEffect(() => {
+    setProductSearch(namaProdukOutput);
+  }, [namaProdukOutput]);
+
+  const selectProduct = (name: string) => {
+    const stockItem = stokData.find((s) => s.namaProduk === name);
+    setNamaProdukOutput(name);
+    setProductSearch(name);
+    setSatuanOutput(stockItem?.satuan || satuanOutput);
+    setShowProductDropdown(false);
+  };
 
   // Hitung TOTAL HARGA semua item di keranjang!
   const totalHargaCart = cart.reduce(
@@ -161,17 +180,44 @@ export default function OutputSection({ stokData, customers, namaProdukOutput, s
           />
         </div>
 
-        <div>
+        <div className="relative">
           <label className="block text-sm font-semibold text-gray-800 mb-2">
             Nama Barang <span className="text-red-500">*</span>
           </label>
-          <CustomDropdown
-            value={namaProdukOutput}
-            onChange={setNamaProdukOutput}
-            options={productOptions}
-            placeholder="Pilih barang dari stok..."
-            icon="📦"
+          <input
+            type="text"
+            placeholder="Ketik nama barang..."
+            value={productSearch}
+            onChange={(e) => {
+              const value = e.target.value;
+              setProductSearch(value);
+              setNamaProdukOutput(value);
+              const stockItem = stokData.find((s) => s.namaProduk === value.toUpperCase());
+              if (stockItem) {
+                setSatuanOutput(stockItem.satuan);
+              }
+              setShowProductDropdown(true);
+            }}
+            onFocus={() => setShowProductDropdown(true)}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-red-100 focus:border-red-500 outline-none transition text-black"
           />
+          {showProductDropdown && filteredProductOptions.length > 0 && (
+            <div className="absolute z-50 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
+              {filteredProductOptions.map((opt) => (
+                <button
+                  type="button"
+                  key={opt.value}
+                  onClick={() => selectProduct(opt.value)}
+                  className="w-full px-4 py-3 text-left hover:bg-red-50 transition text-gray-800 font-medium border-b border-gray-100 last:border-0"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{opt.label}</span>
+                    <span className="text-xs text-gray-500">{opt.badge}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
           {namaProdukOutput ? (
             <p className="text-xs text-emerald-600 font-medium mt-2 flex items-center gap-1">
               ✅ Stok tersedia: <span className="font-bold">{getAvailableFor(namaProdukOutput)} {satuanOutput}</span>

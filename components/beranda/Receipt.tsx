@@ -60,8 +60,14 @@ export default function Receipt({
             
             @media print {
               @page {
-                size: A5 portrait;
-                margin: 15mm;
+                size: A4 portrait;
+                margin: 10mm;
+              }
+              html, body {
+                width: auto;
+                height: auto;
+                margin: 0;
+                padding: 0;
               }
               body * {
                 visibility: hidden;
@@ -70,12 +76,14 @@ export default function Receipt({
                 visibility: visible;
               }
               .print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                max-width: 120mm;
+                position: static;
+                left: auto;
+                top: auto;
+                width: auto;
+                max-width: none;
                 font-family: 'Arial', sans-serif;
+                font-size: 10px;
+                line-height: 1.3;
               }
               .no-print {
                 display: none !important;
@@ -84,42 +92,44 @@ export default function Receipt({
               /* Print Styles */
               .print-header {
                 text-align: center;
-                margin-bottom: 15px;
-                padding-bottom: 12px;
-                border-bottom: 2.5px solid #000;
+                margin-bottom: 10px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #000;
+                page-break-after: avoid;
               }
               .print-title {
-                font-size: 28px;
+                font-size: 22px;
                 font-weight: 900;
-                letter-spacing: 2px;
+                letter-spacing: 1px;
                 margin-bottom: 4px;
                 color: #000;
               }
               .print-branch {
-                font-size: 14px;
+                font-size: 12px;
                 font-weight: 700;
                 color: #000;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
               }
               .print-meta {
-                font-size: 10px;
+                font-size: 9px;
                 line-height: 1.4;
                 color: #000;
               }
               .print-item {
-                margin-bottom: 12px;
+                margin-bottom: 8px;
                 page-break-inside: avoid;
+                break-inside: avoid;
               }
               .print-item-name {
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 700;
                 color: #000;
-                margin-bottom: 3px;
+                margin-bottom: 2px;
               }
               .print-item-details {
                 display: flex;
                 justify-content: space-between;
-                font-size: 11px;
+                font-size: 10px;
                 color: #333;
               }
               .print-item-price {
@@ -127,15 +137,17 @@ export default function Receipt({
                 color: #000;
               }
               .print-total-section {
-                margin-top: 15px;
-                padding-top: 12px;
-                border-top: 2.5px solid #000;
+                margin-top: 12px;
+                padding-top: 10px;
+                border-top: 2px solid #000;
+                page-break-inside: avoid;
+                break-inside: avoid;
               }
               .print-total-items {
                 display: flex;
                 justify-content: space-between;
-                font-size: 11px;
-                margin-bottom: 10px;
+                font-size: 10px;
+                margin-bottom: 8px;
                 font-weight: 600;
               }
               .print-grand-total {
@@ -143,45 +155,49 @@ export default function Receipt({
                 justify-content: space-between;
                 align-items: center;
                 background: #f0f0f0;
-                padding: 12px 15px;
-                border-radius: 8px;
-                margin: 10px 0;
+                padding: 10px 12px;
+                border-radius: 6px;
+                margin: 8px 0;
               }
               .print-grand-total-label {
-                font-size: 16px;
+                font-size: 14px;
                 font-weight: 900;
                 color: #000;
               }
               .print-grand-total-amount {
-                font-size: 18px;
+                font-size: 16px;
                 font-weight: 900;
                 color: #000;
               }
               .print-footer {
                 text-align: center;
-                margin-top: 15px;
-                padding-top: 12px;
-                border-top: 2px dashed #666;
+                margin-top: 12px;
+                padding-top: 10px;
+                border-top: 1px dashed #666;
+                page-break-inside: avoid;
+                break-inside: avoid;
               }
               .print-officer {
-                font-size: 10px;
-                margin-bottom: 10px;
+                font-size: 9px;
+                margin-bottom: 8px;
                 color: #000;
               }
               .print-thanks {
-                font-size: 14px;
+                font-size: 12px;
                 font-weight: 700;
                 color: #000;
-                margin-bottom: 3px;
+                margin-bottom: 2px;
               }
               .print-tagline {
-                font-size: 9px;
+                font-size: 8px;
                 color: #666;
               }
-              /* Ensure on-screen scroll doesn't crop print output */
               .receipt-items {
                 max-height: none !important;
                 overflow: visible !important;
+              }
+              .print-area * {
+                -webkit-print-color-adjust: exact;
               }
             }
           `,
