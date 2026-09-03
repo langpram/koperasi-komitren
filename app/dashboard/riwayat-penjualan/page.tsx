@@ -120,7 +120,7 @@ export default function RiwayatPenjualanPage() {
         "Satuan": item.satuan,
         "Harga Jual Satuan": item.hargaJualSatuan?.toLocaleString("id-ID") || 0,
         "Total Harga": totalHarga.toLocaleString("id-ID"),
-        "Customer": item.tujuanCustomer || "-",
+        "Nama Customer": item.tujuanCustomer || "-",
         "User": item.user,
       };
     });
@@ -133,7 +133,7 @@ export default function RiwayatPenjualanPage() {
       "Satuan": "",
       "Harga Jual Satuan": "TOTAL",
       "Total Harga": totalPenjualan.toLocaleString("id-ID"),
-      "Customer": "",
+      "Nama Customer": "",
       "User": "",
     } as any);
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
+import { db, isFirebaseConfigured } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
 const cabangList = [
@@ -33,6 +33,12 @@ export default function LoginPage() {
     setError("");
 
     try {
+      if (!isFirebaseConfigured) {
+        throw new Error(
+          "Konfigurasi Firebase belum tersedia. Tambahkan variabel NEXT_PUBLIC_FIREBASE_* di file .env.local."
+        );
+      }
+
       const q = query(
         collection(db, "users"),
         where("username", "==", username),
@@ -70,8 +76,9 @@ export default function LoginPage() {
       }, 1000);
     } catch (e: any) {
       setError(`Error: ${e.message}`);
-      setLoading(false);
       setTimeout(() => setError(""), 3000);
+    } finally {
+      setLoading(false);
     }
   };
 
