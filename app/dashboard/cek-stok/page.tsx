@@ -9,7 +9,7 @@ import {
   onSnapshot,
   deleteDoc,
   doc,
-  setDoc,
+  setDoc, 
   updateDoc,
 } from "firebase/firestore";
 import * as XLSX from "xlsx";
@@ -54,6 +54,146 @@ interface TransaksiItem {
   noStruk?: string;
 }
 
+/* ============================================================
+   ICON SET — pengganti emoji, konsisten navy/putih
+   ============================================================ */
+type IconProps = { className?: string };
+
+const IconPackage = ({ className = "w-5 h-5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 8l-9-5-9 5 9 5 9-5Z" />
+    <path d="M3 8v8l9 5 9-5V8" />
+    <path d="M12 13v8" />
+  </svg>
+);
+
+const IconSearch = ({ className = "w-4 h-4" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="7" />
+    <path d="M21 21l-4.35-4.35" />
+  </svg>
+);
+
+const IconDownload = ({ className = "w-4 h-4" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v12M7 10l5 5 5-5" />
+    <path d="M4 19h16" />
+  </svg>
+);
+
+const IconLedger = ({ className = "w-5 h-5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 20V10M10 20V4M16 20v-7" />
+    <path d="M3 20h18" />
+  </svg>
+);
+
+const IconTrayIn = ({ className = "w-5 h-5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v10M8 9l4 4 4-4" />
+    <path d="M4 15h16v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4Z" />
+  </svg>
+);
+
+const IconTrayOut = ({ className = "w-5 h-5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 15V5M8 9l4-4 4 4" />
+    <path d="M4 15h16v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4Z" />
+  </svg>
+);
+
+const IconCheckCircle = ({ className = "w-5 h-5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8.5 12.5l2.5 2.5 5-5" />
+  </svg>
+);
+
+const IconAlertCircle = ({ className = "w-5 h-5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 8v5" />
+    <path d="M12 16h.01" />
+  </svg>
+);
+
+const IconSave = ({ className = "w-5 h-5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
+    <path d="M8 4v5h7V4" />
+    <path d="M7 13h10v7H7z" />
+  </svg>
+);
+
+const IconSpinner = ({ className = "w-5 h-5" }: IconProps) => (
+  <svg className={`${className} animate-spin`} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeOpacity="0.25" />
+    <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const IconPencil = ({ className = "w-3.5 h-3.5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 20h4L18.5 9.5a2.121 2.121 0 0 0-3-3L5 17v3Z" />
+    <path d="M13.5 6.5l4 4" />
+  </svg>
+);
+
+const IconPrinter = ({ className = "w-3.5 h-3.5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9V4h12v5" />
+    <rect x="4" y="9" width="16" height="8" rx="1" />
+    <path d="M6 17h12v5H6z" />
+  </svg>
+);
+
+const IconChevronDown = ({ className = "w-3.5 h-3.5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+
+const IconChevronUp = ({ className = "w-3.5 h-3.5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 15l6-6 6 6" />
+  </svg>
+);
+
+const IconCornerDownRight = ({ className = "w-3 h-3" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 4v8a2 2 0 0 0 2 2h10M14 10l4 4-4 4" />
+  </svg>
+);
+
+const IconX = ({ className = "w-6 h-6" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);
+
+const IconTrash = ({ className = "w-3.5 h-3.5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 6h18" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+  </svg>
+);
+
+const IconChart = ({ className = "w-4 h-4" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3v18h18" />
+    <path d="M7 15l4-4 4 4 5-5" />
+  </svg>
+);
+
+const IconInfo = ({ className = "w-4 h-4" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5" />
+    <path d="M12 8h.01" />
+  </svg>
+);
+
 // Tambah nama bulan untuk dropdown laporan bulanan
 const monthNames: string[] = [
   "Januari",
@@ -80,7 +220,12 @@ export default function CekStokPage() {
   const [productPrices, setProductPrices] = useState<Record<string, number>>(
     {}
   );
+  const [productBuyPrices, setProductBuyPrices] = useState<Record<string, number>>(
+    {}
+  );
   const [editPrice, setEditPrice] = useState<string>("");
+  const [editHargaBeliManual, setEditHargaBeliManual] = useState<string>("");
+  const [isEditingHargaBeliManual, setIsEditingHargaBeliManual] = useState(false);
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [editNamaProduk, setEditNamaProduk] = useState("");
   const [editSatuan, setEditSatuan] = useState("");
@@ -258,14 +403,19 @@ export default function CekStokPage() {
     const q = query(collection(db, "cabang", cabangName, "produk"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const map: Record<string, number> = {};
+      const buyMap: Record<string, number> = {};
       snapshot.docs.forEach((doc) => {
         const data = doc.data() as any;
         const name = (data.namaProduk || doc.id || "").toUpperCase();
         if (name && typeof data.hargaJualSatuan === "number") {
           map[name] = data.hargaJualSatuan;
         }
+        if (name && typeof data.hargaBeliRataRataManual === "number") {
+          buyMap[name] = data.hargaBeliRataRataManual;
+        }
       });
       setProductPrices(map);
+      setProductBuyPrices(buyMap);
     });
     return () => unsubscribe();
   };
@@ -305,6 +455,12 @@ export default function CekStokPage() {
   // Hitung rata-rata harga beli dari supplier-supplier yang pernah menyuplai produk ini (mengambil harga beli terakhir per supplier, lalu dirata-rata)
   const getAverageHargaBeliSemuaSupplier = (productName: string) => {
     const upper = productName.toUpperCase();
+    if (
+      typeof productBuyPrices[upper] === "number" &&
+      productBuyPrices[upper] > 0
+    ) {
+      return productBuyPrices[upper];
+    }
     const supplierSet = new Set<string>();
     transaksiList.forEach((t) => {
       if (
@@ -323,6 +479,40 @@ export default function CekStokPage() {
       latestPerSupplier.length;
     return avg;
   };
+
+  const saveProductBuyPrice = async () => {
+    if (!selectedProduct) return;
+    const price = parseFloat(editHargaBeliManual);
+    if (!Number.isFinite(price) || price <= 0) {
+      alert("Masukkan harga beli rata-rata manual yang valid");
+      return;
+    }
+
+    try {
+      const ref = doc(db, "cabang", cabang, "produk", selectedProduct.namaProduk);
+      await setDoc(
+        ref,
+        {
+          namaProduk: selectedProduct.namaProduk,
+          hargaBeliRataRataManual: price,
+          updatedAt: new Date(),
+        },
+        { merge: true }
+      );
+
+      setProductBuyPrices((prev) => ({
+        ...prev,
+        [selectedProduct.namaProduk.toUpperCase()]: price,
+      }));
+      setEditHargaBeliManual("");
+      setIsEditingHargaBeliManual(false);
+      alert("✅ Harga beli rata-rata manual berhasil disimpan");
+    } catch (error: any) {
+      console.error(error);
+      alert(`❌ Gagal menyimpan harga beli rata-rata: ${error?.message || error}`);
+    }
+  };
+
   const saveProductPrice = async () => {
     if (!selectedProduct) return;
     const price = parseFloat(editPrice);
@@ -432,6 +622,14 @@ export default function CekStokPage() {
         )
       );
       setProductPrices((prev) => {
+        const copy = { ...prev };
+        if (copy[oldName]) {
+          copy[newName] = copy[oldName];
+          delete copy[oldName];
+        }
+        return copy;
+      });
+      setProductBuyPrices((prev) => {
         const copy = { ...prev };
         if (copy[oldName]) {
           copy[newName] = copy[oldName];
@@ -848,40 +1046,42 @@ export default function CekStokPage() {
   return (
     <div className="space-y-6">
       {/* Header & Search */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-xl p-6 text-white">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold flex items-center gap-3">
-            <span className="text-3xl">📦</span>
+      <div className="bg-white rounded-2xl shadow-xl p-6 border border-[#DDE3EE]">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+          <h2 className="text-2xl font-bold text-[#0B1424] flex items-center gap-3">
+            <IconPackage className="w-8 h-8 text-[#1B3060]" />
             Cek Stok Barang
           </h2>
-          <div className="flex gap-2">
+          <div className="flex gap-3 w-full md:w-auto">
             <button
               onClick={openTransaksiModal}
-              className="px-5 py-2.5 bg-white text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition shadow-lg"
+              className="flex-1 md:flex-none px-5 py-2.5 bg-[#1B3060] text-white rounded-xl font-bold hover:bg-[#0B1424] transition shadow-md flex items-center justify-center gap-2"
             >
-              📋 Kelola Transaksi
+              <IconLedger className="w-4 h-4" />
+              Kelola Transaksi
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="relative">
+            <IconSearch className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="🔍 Cari produk..."
+              placeholder="Cari produk..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-5 py-3 rounded-xl text-gray-800 font-medium outline-none focus:ring-4 focus:ring-blue-300 transition"
+              className="w-full pl-10 pr-4 py-3 border-2 border-[#DDE3EE] rounded-xl focus:ring-4 focus:ring-[#1B3060]/10 focus:border-[#1B3060] outline-none transition text-[#0B1424] font-medium"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-white/90 mb-1">
+              <label className="block text-xs font-semibold text-slate-500 mb-1.5">
                 Bulan
               </label>
               <select
                 value={month}
                 onChange={(e) => setMonth(parseInt(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl text-blue-700 font-bold bg-white border-2 border-blue-200 focus:ring-4 focus:ring-blue-200 focus:border-blue-500 outline-none transition shadow-sm appearance-none cursor-pointer"
+                className="w-full px-4 py-3 rounded-xl text-[#0B1424] font-bold bg-white border-2 border-[#DDE3EE] focus:ring-4 focus:ring-[#1B3060]/10 focus:border-[#1B3060] outline-none transition shadow-sm appearance-none cursor-pointer"
               >
                 {monthNames.map((name, i) => (
                   <option key={i + 1} value={i + 1}>
@@ -891,13 +1091,13 @@ export default function CekStokPage() {
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-white/90 mb-1">
+              <label className="block text-xs font-semibold text-slate-500 mb-1.5">
                 Tahun
               </label>
               <select
                 value={year}
                 onChange={(e) => setYear(parseInt(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl text-blue-700 font-bold bg-white border-2 border-blue-200 focus:ring-4 focus:ring-blue-200 focus:border-blue-500 outline-none transition shadow-sm appearance-none cursor-pointer"
+                className="w-full px-4 py-3 rounded-xl text-[#0B1424] font-bold bg-white border-2 border-[#DDE3EE] focus:ring-4 focus:ring-[#1B3060]/10 focus:border-[#1B3060] outline-none transition shadow-sm appearance-none cursor-pointer"
               >
                 {Array.from(
                   { length: 6 },
@@ -910,130 +1110,141 @@ export default function CekStokPage() {
               </select>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={exportLaporanBulanan}
-              className="flex-1 px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition shadow-md"
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#B8892B] to-[#8A6317] text-white rounded-xl font-bold hover:shadow-lg hover:scale-[1.02] transition flex items-center justify-center gap-2 shadow-md"
             >
-              📊 Export Laporan Bulanan
+              <IconDownload className="w-4 h-4" />
+              Laporan Bulanan
             </button>
             <button
               onClick={exportSupplierKategori}
-              className="flex-1 px-4 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition shadow-md"
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#1B3060] to-[#0B1424] text-white rounded-xl font-bold hover:shadow-lg hover:scale-[1.02] transition flex items-center justify-center gap-2 shadow-md"
             >
-              📈 Export Supplier per Produk
+              <IconChart className="w-4 h-4" />
+              Supplier per Produk
             </button>
           </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-5">
-        <div className="bg-white rounded-xl shadow-lg p-5 border-l-4 border-blue-500">
-          <div className="text-sm font-semibold text-gray-600 mb-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="bg-white rounded-2xl shadow-xl p-6 border border-[#DDE3EE] relative overflow-hidden">
+          <div className="absolute right-4 top-4 w-14 h-14 rounded-xl bg-[#EEF1F7] flex items-center justify-center">
+            <IconPackage className="w-7 h-7 text-[#1B3060]" />
+          </div>
+          <div className="text-sm font-semibold text-slate-500 mb-2">
             Total Produk
           </div>
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-4xl font-bold text-[#0B1424]">
             {stokData.length}
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-lg p-5 border-l-4 border-green-500">
-          <div className="text-sm font-semibold text-gray-600 mb-1">
+        <div className="bg-white rounded-2xl shadow-xl p-6 border border-[#DDE3EE] relative overflow-hidden">
+          <div className="absolute right-4 top-4 w-14 h-14 rounded-xl bg-[#E8F3EC] flex items-center justify-center">
+            <IconCheckCircle className="w-7 h-7 text-[#1F7A4D]" />
+          </div>
+          <div className="text-sm font-semibold text-slate-500 mb-2">
             Stok Tersedia
           </div>
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-4xl font-bold text-[#1F7A4D]">
             {stokData.filter((s) => s.totalJumlah > 0).length}
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-lg p-5 border-l-4 border-red-500">
-          <div className="text-sm font-semibold text-gray-600 mb-1">
+        <div className="bg-white rounded-2xl shadow-xl p-6 border border-[#DDE3EE] relative overflow-hidden">
+          <div className="absolute right-4 top-4 w-14 h-14 rounded-xl bg-[#FBE9E7] flex items-center justify-center">
+            <IconAlertCircle className="w-7 h-7 text-[#B23A34]" />
+          </div>
+          <div className="text-sm font-semibold text-slate-500 mb-2">
             Stok Habis
           </div>
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-4xl font-bold text-[#B23A34]">
             {stokData.filter((s) => s.totalJumlah <= 0).length}
           </div>
         </div>
       </div>
 
       {/* Tabel Stok */}
-      <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+      <div className="bg-white rounded-2xl shadow-xl p-6 border border-[#DDE3EE]">
         {loading ? (
-          <div className="text-center py-12">
-            <div className="text-5xl mb-3">⏳</div>
-            <div className="text-gray-500 font-medium">
+          <div className="text-center py-16">
+            <IconSpinner className="w-12 h-12 mx-auto mb-4 text-[#1B3060]" />
+            <div className="text-slate-500 font-medium">
               Loading data stok...
             </div>
           </div>
         ) : filteredStok.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-5xl mb-3">📭</div>
-            <div className="text-gray-500 font-medium">
+          <div className="text-center py-16">
+            <IconPackage className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+            <div className="text-slate-500 font-medium">
               {searchQuery ? "Produk tidak ditemukan" : "Belum ada data stok"}
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto rounded-3xl border border-[#DDE3EE] shadow-sm">
+            <table className="min-w-full divide-y divide-[#EEF1F7] bg-white">
               <thead>
-                <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-4 px-4 font-bold text-gray-900">
+                <tr className="bg-[#F7F8FB]">
+                  <th className="text-left py-4 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     No
                   </th>
-                  <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  <th className="text-left py-4 px-4 font-bold text-[#0B1424]">
                     Nama Produk
                   </th>
-                  <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  <th className="text-left py-4 px-4 font-bold text-[#0B1424]">
                     Jumlah Stok
                   </th>
-                  <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  <th className="text-left py-4 px-4 font-bold text-[#0B1424]">
                     Status
                   </th>
-                  <th className="text-left py-4 px-4 font-bold text-gray-900">
+                  <th className="text-left py-4 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Aksi
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-[#F1F3F8] bg-white">
                 {filteredStok.map((item, index) => (
                   <tr
                     key={index}
-                    className="border-b border-gray-100 hover:bg-blue-50 transition"
+                    className="bg-white hover:bg-[#F7F8FB] transition"
                   >
-                    <td className="py-4 px-4 font-semibold text-gray-700">
+                    <td className="py-4 px-4 font-semibold text-slate-600 text-sm">
                       {index + 1}
                     </td>
-                    <td className="py-4 px-4 font-bold text-gray-900">
+                    <td className="py-4 px-4 font-bold text-[#0B1424]">
                       {item.namaProduk}
                     </td>
                     <td className="py-4 px-4">
-                      <span className="font-bold text-2xl text-gray-900">
+                      <span className="font-bold text-2xl text-[#0B1424]">
                         {item.totalJumlah}
                       </span>
-                      <span className="ml-2 text-gray-600 font-semibold">
+                      <span className="ml-2 text-slate-500 font-semibold">
                         {item.satuan}
                       </span>
                     </td>
                     <td className="py-4 px-4">
                       {item.totalJumlah > 10 ? (
-                        <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold">
-                          ✅ Aman
+                        <span className="px-3 py-1.5 bg-[#E8F3EC] text-[#1F7A4D] rounded-full text-xs font-bold flex items-center gap-1.5 w-fit">
+                          <IconCheckCircle className="w-3.5 h-3.5" /> Aman
                         </span>
                       ) : item.totalJumlah > 0 ? (
-                        <span className="px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-bold">
-                          ⚠️ Menipis
+                        <span className="px-3 py-1.5 bg-[#F7EEDD] text-[#8A6317] rounded-full text-xs font-bold flex items-center gap-1.5 w-fit">
+                          <IconAlertCircle className="w-3.5 h-3.5" /> Menipis
                         </span>
                       ) : (
-                        <span className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-bold">
-                          ❌ Habis
+                        <span className="px-3 py-1.5 bg-[#FBE9E7] text-[#B23A34] rounded-full text-xs font-bold flex items-center gap-1.5 w-fit">
+                          <IconAlertCircle className="w-3.5 h-3.5" /> Habis
                         </span>
                       )}
                     </td>
                     <td className="py-4 px-4">
                       <button
                         onClick={() => openModal(item)}
-                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition shadow-md hover:shadow-lg"
+                        className="px-4 py-2 bg-[#1B3060] hover:bg-[#0B1424] text-white rounded-lg font-semibold transition shadow-md hover:shadow-lg flex items-center gap-2"
                       >
-                        📊 Detail
+                        <IconChart className="w-4 h-4" /> Detail
                       </button>
                     </td>
                   </tr>
@@ -1047,7 +1258,7 @@ export default function CekStokPage() {
       {/* Modal Detail Stok */}
       {showModal && selectedProduct && (
         <div
-          className="fixed inset-0 backdrop-blur-md bg-white/30 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 backdrop-blur-md bg-[#0B1424]/30 flex items-center justify-center z-50 p-4"
           onClick={closeModal}
         >
           <div
@@ -1055,23 +1266,27 @@ export default function CekStokPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-start gap-4">
-                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                  <span className="text-3xl">📦</span>
-                  Detail Stok: {selectedProduct.namaProduk}
-                </h3>
+              <h3 className="text-2xl font-bold text-[#0B1424] flex items-center gap-3">
+                <IconPackage className="w-7 h-7 text-[#1B3060]" />
+                Detail Stok: {selectedProduct.namaProduk}
+              </h3>
+              <div className="flex items-center gap-3">
                 {isEditingProduct ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={saveProductEdit}
                       disabled={renameLoading}
-                      className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition"
+                      className="px-4 py-2 bg-[#1F7A4D] hover:bg-[#185c3a] disabled:bg-slate-300 text-white rounded-lg font-semibold transition flex items-center gap-2"
                     >
-                      {renameLoading ? "Menyimpan..." : "💾 Simpan"}
+                      {renameLoading ? (
+                        <><IconSpinner className="w-4 h-4" /> Menyimpan...</>
+                      ) : (
+                        <><IconSave className="w-4 h-4" /> Simpan</>
+                      )}
                     </button>
                     <button
                       onClick={cancelEditProduct}
-                      className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold transition"
+                      className="px-4 py-2 bg-[#EEF1F7] hover:bg-[#E0E6F2] text-[#0B1424] rounded-lg font-semibold transition"
                     >
                       Batal
                     </button>
@@ -1079,28 +1294,26 @@ export default function CekStokPage() {
                 ) : (
                   <button
                     onClick={startEditProduct}
-                    className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition"
+                    className="px-4 py-2 border border-[#1B3060] text-[#1B3060] hover:bg-[#EEF1F7] rounded-lg font-semibold transition flex items-center gap-2"
                   >
-                    ✏️ Edit Produk
+                    <IconPencil className="w-3.5 h-3.5" /> Edit Produk
                   </button>
                 )}
-              </div>
-              <div className="flex items-center gap-3">
                 <button
                   onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-600 text-3xl font-bold transition"
+                  className="text-slate-400 hover:text-[#0B1424] transition"
                 >
-                  ×
+                  <IconX className="w-6 h-6" />
                 </button>
               </div>
             </div>
 
-            {/* Total Stok */}
+            {/* Form Edit Produk */}
             {isEditingProduct && (
-              <div className="bg-gray-50 rounded-xl p-4 mb-4 border-2 border-gray-200">
-                <div className="grid grid-cols-1 gap-3">
+              <div className="bg-[#F7F8FB] rounded-xl p-5 mb-6 border border-[#DDE3EE]">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-[#0B1424] mb-2">
                       Nama Produk
                     </label>
                     <input
@@ -1109,17 +1322,17 @@ export default function CekStokPage() {
                       onChange={(e) =>
                         setEditNamaProduk(e.target.value.toUpperCase())
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-200 text-gray-900"
+                      className="w-full px-4 py-3 border-2 border-[#DDE3EE] rounded-xl focus:ring-4 focus:ring-[#1B3060]/10 focus:border-[#1B3060] outline-none transition text-[#0B1424]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    <label className="block text-sm font-semibold text-[#0B1424] mb-2">
                       Satuan
                     </label>
                     <select
                       value={editSatuan}
                       onChange={(e) => setEditSatuan(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-200 text-gray-900"
+                      className="w-full px-4 py-3 border-2 border-[#DDE3EE] rounded-xl focus:ring-4 focus:ring-[#1B3060]/10 focus:border-[#1B3060] outline-none transition text-[#0B1424] bg-white"
                     >
                       <option value="">Pilih satuan</option>
                       {satuanOptions.map((s) => (
@@ -1137,10 +1350,11 @@ export default function CekStokPage() {
                       onChange={(e) =>
                         setUpdateTransaksiHistory(e.target.checked)
                       }
+                      className="w-4 h-4 accent-[#1B3060]"
                     />
                     <label
                       htmlFor="updateHistory"
-                      className="text-sm text-gray-700"
+                      className="text-sm text-slate-600 font-medium"
                     >
                       Perbarui nama produk pada riwayat transaksi juga
                     </label>
@@ -1148,25 +1362,30 @@ export default function CekStokPage() {
                 </div>
               </div>
             )}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 mb-6 text-white">
-              <div className="text-sm font-semibold mb-2 opacity-90">
+
+            {/* Total Stok Card */}
+            <div className="bg-gradient-to-r from-[#1B3060] to-[#0B1424] rounded-xl p-6 mb-6 text-white shadow-lg">
+              <div className="text-sm font-semibold mb-2 opacity-90 flex items-center gap-2">
+                <IconPackage className="w-4 h-4" />
                 Total Stok Tersedia
               </div>
               <div className="text-5xl font-bold">
                 {selectedProduct.totalJumlah}{" "}
-                <span className="text-2xl opacity-90">
+                <span className="text-2xl opacity-90 font-semibold">
                   {selectedProduct.satuan}
                 </span>
               </div>
             </div>
 
             {/* Detail per Supplier */}
-            <div>
-              <h4 className="font-bold text-gray-900 mb-4 text-lg">
-                📊 Detail per Supplier:
+            <div className="mb-6">
+              <h4 className="font-bold text-[#0B1424] mb-4 text-lg flex items-center gap-2">
+                <IconLedger className="w-5 h-5 text-[#1B3060]" />
+                Detail per Supplier
               </h4>
               {selectedProduct.suppliers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-10 text-slate-400 bg-[#F7F8FB] rounded-xl border border-[#DDE3EE]">
+                  <IconPackage className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                   Belum ada data supplier
                 </div>
               ) : (
@@ -1174,13 +1393,14 @@ export default function CekStokPage() {
                   {selectedProduct.suppliers.map((supplier, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border-2 border-gray-200 hover:border-blue-300 transition"
+                      className="flex items-center justify-between p-5 bg-[#F7F8FB] rounded-xl border border-[#DDE3EE] hover:border-[#1B3060] hover:bg-[#EEF1F7] transition"
                     >
                       <div>
-                        <div className="font-bold text-gray-900 text-lg">
+                        <div className="font-bold text-[#0B1424] text-lg">
                           {supplier.nama}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-slate-500 font-medium flex items-center gap-1.5 mt-1">
+                          <IconInfo className="w-3.5 h-3.5 text-[#1B3060]" />
                           HB terakhir: Rp{" "}
                           {getLatestHargaBeli(
                             selectedProduct.namaProduk,
@@ -1189,10 +1409,10 @@ export default function CekStokPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-3xl text-blue-600">
+                        <div className="font-bold text-3xl text-[#1B3060]">
                           {supplier.jumlah}
                         </div>
-                        <div className="text-sm text-gray-600 font-semibold">
+                        <div className="text-sm text-slate-500 font-semibold">
                           {selectedProduct.satuan}
                         </div>
                       </div>
@@ -1203,24 +1423,88 @@ export default function CekStokPage() {
             </div>
 
             {/* Harga Beli & Jual */}
-            <div className="mt-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
-                  <div className="text-sm text-gray-600">
-                    Harga Beli Rata-rata (semua supplier)
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div className="bg-[#F7F8FB] rounded-xl p-5 border border-[#DDE3EE]">
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <div>
+                      <div className="text-sm text-slate-500 font-semibold">
+                        Harga Beli Rata-rata
+                      </div>
+                      <div className="text-xs text-slate-400 mt-1">
+                        {typeof productBuyPrices[selectedProduct.namaProduk.toUpperCase()] === "number"
+                          ? "(manual override)"
+                          : "(semua supplier)"}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditHargaBeliManual(
+                          String(
+                            getAverageHargaBeliSemuaSupplier(selectedProduct.namaProduk)
+                          )
+                        );
+                        setIsEditingHargaBeliManual(true);
+                      }}
+                      className="px-2.5 py-1.5 border border-[#1B3060] text-[#1B3060] rounded-lg text-xs font-bold hover:bg-[#EEF1F7] transition"
+                    >
+                      Edit
+                    </button>
                   </div>
-                  <div className="text-2xl font-bold text-gray-900 mt-1">
+                  <div className="text-2xl font-bold text-[#0B1424]">
                     Rp{" "}
                     {getAverageHargaBeliSemuaSupplier(
                       selectedProduct.namaProduk
                     ).toLocaleString("id-ID")}
                   </div>
+
+                  {isEditingHargaBeliManual && (
+                    <div className="mt-4 space-y-3">
+                      <input
+                        type="number"
+                        min="1"
+                        value={editHargaBeliManual}
+                        onChange={(e) => setEditHargaBeliManual(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-[#DDE3EE] rounded-xl focus:ring-4 focus:ring-[#1B3060]/10 focus:border-[#1B3060] outline-none transition text-[#0B1424]"
+                        placeholder="Contoh: 15000"
+                      />
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingHargaBeliManual(false);
+                            setEditHargaBeliManual("");
+                          }}
+                          className="w-11 h-11 flex items-center justify-center bg-[#EEF1F7] hover:bg-[#E0E6F2] text-[#0B1424] rounded-xl font-bold transition"
+                          aria-label="Batal edit harga beli"
+                          title="Batal"
+                        >
+                          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M6 6l12 12M18 6L6 18" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={saveProductBuyPrice}
+                          className="w-11 h-11 flex items-center justify-center bg-[#1B3060] hover:bg-[#0B1424] text-white rounded-xl font-bold shadow-md transition"
+                          aria-label="Simpan harga beli"
+                          title="Simpan"
+                        >
+                          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 12.5l4 4L19 2.5" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
-                  <div className="text-sm text-gray-600">
-                    Harga Jual Satuan (konfigurasi)
+                <div className="bg-[#F7F8FB] rounded-xl p-5 border border-[#DDE3EE]">
+                  <div className="text-sm text-slate-500 font-semibold mb-1">
+                    Harga Jual Satuan
                   </div>
-                  <div className="text-2xl font-bold text-gray-900 mt-1">
+                  <div className="text-xs text-slate-400 mb-2">(konfigurasi)</div>
+                  <div className="text-2xl font-bold text-[#1F7A4D]">
                     Rp{" "}
                     {(
                       productPrices[selectedProduct.namaProduk] || 0
@@ -1229,8 +1513,8 @@ export default function CekStokPage() {
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <div>
+                <label className="block text-sm font-semibold text-[#0B1424] mb-2">
                   Tetapkan Harga Jual
                 </label>
                 <div className="flex items-center gap-3">
@@ -1239,16 +1523,17 @@ export default function CekStokPage() {
                     placeholder="Contoh: 18000"
                     value={editPrice}
                     onChange={(e) => setEditPrice(e.target.value)}
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-red-100 focus:border-red-500 outline-none transition text-black"
+                    className="flex-1 px-4 py-3 border-2 border-[#DDE3EE] rounded-xl focus:ring-4 focus:ring-[#1B3060]/10 focus:border-[#1B3060] outline-none transition text-[#0B1424]"
                   />
                   <button
                     onClick={saveProductPrice}
-                    className="px-5 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-md"
+                    className="px-5 py-3 bg-[#1B3060] hover:bg-[#0B1424] text-white rounded-xl font-bold shadow-md flex items-center gap-2"
                   >
-                    💾 Simpan
+                    <IconSave className="w-4 h-4" /> Simpan
                   </button>
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+                  <IconInfo className="w-3.5 h-3.5 text-[#1B3060]" />
                   Harga jual ini dipakai saat output barang.
                 </p>
               </div>
@@ -1257,7 +1542,7 @@ export default function CekStokPage() {
             {/* Close Button */}
             <button
               onClick={closeModal}
-              className="w-full mt-6 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-xl font-bold transition"
+              className="w-full mt-8 bg-[#EEF1F7] hover:bg-[#E0E6F2] text-[#0B1424] py-3.5 rounded-xl font-bold transition"
             >
               Tutup
             </button>

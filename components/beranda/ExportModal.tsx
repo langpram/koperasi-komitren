@@ -10,6 +10,7 @@ interface TransaksiItem {
   type: string;
   namaProduk: string;
   namaSupplier?: string;
+  tujuanCustomer?: string;
   jumlah: number;
   satuan: string;
   timestamp: Timestamp | Date | string | number;
@@ -54,6 +55,24 @@ export default function ExportModal({
     const date = new Date(dateString);
     date.setHours(0, 0, 0, 0);
     return date;
+  };
+
+  const getTimestampValue = (timestamp: TransaksiItem["timestamp"]) => {
+    if (!timestamp) return 0;
+    if (typeof timestamp === "object" && "toDate" in timestamp) {
+      return (timestamp as any).toDate().getTime();
+    }
+    if (timestamp instanceof Date) {
+      return timestamp.getTime();
+    }
+    if (typeof timestamp === "number") {
+      return timestamp;
+    }
+    if (typeof timestamp === "string") {
+      const parsed = Date.parse(timestamp);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
   };
 
   const getFilteredData = (): TransaksiItem[] => {
@@ -101,7 +120,7 @@ export default function ExportModal({
       });
     }
 
-    return filtered;
+    return filtered.sort((a, b) => getTimestampValue(a.timestamp) - getTimestampValue(b.timestamp));
   };
 
   const handleExport = async () => {
@@ -124,6 +143,7 @@ export default function ExportModal({
         Type: item.type === "input" ? "INPUT" : "OUTPUT",
         "Nama Produk": item.namaProduk || "-",
         Supplier: item.namaSupplier || "-",
+        "Nama Customer": item.type === "output" ? (item.tujuanCustomer || "-") : "-",
         Jumlah: item.jumlah,
         Satuan: item.satuan || "-",
         "Harga Beli (Satuan)": item.hargaBeliSatuan || "-",
@@ -142,6 +162,7 @@ export default function ExportModal({
         { wch: 10 },
         { wch: 20 },
         { wch: 15 },
+        { wch: 18 },
         { wch: 10 },
         { wch: 10 },
         { wch: 18 },
