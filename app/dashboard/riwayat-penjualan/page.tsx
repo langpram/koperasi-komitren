@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, onSnapshot, where } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import * as XLSX from "xlsx";
 
 interface TransaksiItem {
@@ -14,6 +14,7 @@ interface TransaksiItem {
   hargaBeliSatuan?: number;
   hargaJualSatuan?: number;
   tujuanCustomer?: string;
+  namaSupplier?: string;
   timestamp: any;
   user: string;
 }
@@ -86,6 +87,8 @@ const IconLoader = ({ className = "w-10 h-10" }: IconProps) => (
 export default function RiwayatPenjualanPage() {
   const [cabang, setCabang] = useState("");
   const [riwayatPenjualan, setRiwayatPenjualan] = useState<TransaksiItem[]>([]);
+  const [transaksiInput, setTransaksiInput] = useState<TransaksiItem[]>([]);
+  const [hargaBeliManual, setHargaBeliManual] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   // Toast notifications — konsisten dengan halaman lain
@@ -111,7 +114,6 @@ export default function RiwayatPenjualanPage() {
       // Load transaksi output
       const q = query(
         collection(db, "cabang", storedCabang, "transaksi"),
-        where("type", "==", "output"),
         orderBy("timestamp", "desc")
       );
 
@@ -120,18 +122,89 @@ export default function RiwayatPenjualanPage() {
           id: doc.id,
           ...doc.data(),
         })) as TransaksiItem[];
-        setRiwayatPenjualan(data);
+        const transaksiOutput = data.filter((item) => item.type === "output");
+        setRiwayatPenjualan(transaksiOutput);
+        setTransaksiInput(data.filter((item) => item.type === "input"));
 
         // Extract unique customers
-        const uniqueCustomers = Array.from(new Set(data.map((t) => t.tujuanCustomer).filter(Boolean)));
+        const uniqueCustomers = Array.from(new Set(transaksiOutput.map((t) => t.tujuanCustomer).filter(Boolean)));
         setCustomers(uniqueCustomers as string[]);
 
         setLoading(false);
       });
 
-      return () => unsubscribeTransaksi();
+      const unsubscribeProduk = onSnapshot(
+        collection(db, "cabang", storedCabang, "produk"),
+        (snapshot) => {
+          const prices: Record<string, number> = {};
+          snapshot.docs.forEach((productDoc) => {
+            const data = productDoc.data();
+            const name = (data.namaProduk || productDoc.id).toUpperCase();
+            if (typeof data.hargaBeliRataRataManual === "number") {
+              prices[name] = data.hargaBeliRataRataManual;
+            }
+          });
+          setHargaBeliManual(prices);
+        }
+      );
+
+      return () => {
+        unsubscribeTransaksi();
+        unsubscribeProduk();
+      };
     }
   }, []);
+
+  const hargaBeliRataRata = useMemo(() => {
+    const latestBySupplier = new Map<
+      string,
+      Map<string, { timestamp: number; price: number }>
+    >();
+
+    transaksiInput.forEach((item) => {
+      const productName = item.namaProduk?.toUpperCase();
+      if (!productName) return;
+
+      const supplierName = item.namaSupplier || "Supplier Tidak Diketahui";
+      const timestamp = item.timestamp?.toMillis?.() || 0;
+      const productSuppliers = latestBySupplier.get(productName) || new Map();
+      const current = productSuppliers.get(supplierName);
+
+      if (!current || timestamp > current.timestamp) {
+        productSuppliers.set(supplierName, {
+          timestamp,
+          price: item.hargaBeliSatuan || 0,
+        });
+      }
+      latestBySupplier.set(productName, productSuppliers);
+    });
+
+    const averages: Record<string, number> = {};
+    latestBySupplier.forEach((suppliers, productName) => {
+      const prices = Array.from(suppliers.values())
+        .map((entry) => entry.price)
+        .filter((price) => price > 0);
+      if (prices.length > 0) {
+        averages[productName] =
+          prices.reduce((sum, price) => sum + price, 0) / prices.length;
+      }
+    });
+
+    Object.entries(hargaBeliManual).forEach(([productName, price]) => {
+      if (price > 0) averages[productName] = price;
+    });
+
+    return averages;
+  }, [transaksiInput, hargaBeliManual]);
+
+  const getHargaBeliRataRata = (productName: string) =>
+    hargaBeliRataRata[productName.toUpperCase()] || 0;
+
+  const getMargin = (item: TransaksiItem) => {
+    const hargaBeli = getHargaBeliRataRata(item.namaProduk);
+    if (hargaBeli <= 0) return null;
+    return ((item.hargaJualSatuan || 0) - hargaBeli) * item.jumlah;
+  };
 
   // Filter data
   const filteredData = riwayatPenjualan.filter((item) => {
@@ -161,6 +234,10 @@ export default function RiwayatPenjualanPage() {
     const harga = item.hargaJualSatuan || 0;
     return sum + (item.jumlah * harga);
   }, 0);
+  const totalMargin = filteredData.reduce(
+    (sum, item) => sum + (getMargin(item) || 0),
+    0
+  );
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return "-";
@@ -183,15 +260,19 @@ export default function RiwayatPenjualanPage() {
     // Prepare data for Excel
     const excelData = filteredData.map((item) => {
       const date = item.timestamp?.toDate?.() || new Date(item.timestamp);
+      const hargaBeli = getHargaBeliRataRata(item.namaProduk);
       const totalHarga = (item.hargaJualSatuan || 0) * item.jumlah;
+      const margin = getMargin(item);
 
       return {
         "Tanggal & Waktu": date.toLocaleString("id-ID"),
         "Nama Produk": item.namaProduk,
         "Jumlah": item.jumlah,
         "Satuan": item.satuan,
+        "Harga Beli Rata-rata": hargaBeli > 0 ? hargaBeli.toLocaleString("id-ID") : "-",
         "Harga Jual Satuan": item.hargaJualSatuan?.toLocaleString("id-ID") || 0,
         "Total Harga": totalHarga.toLocaleString("id-ID"),
+        "Margin": margin === null ? "-" : margin.toLocaleString("id-ID"),
         "Nama Customer": item.tujuanCustomer || "-",
         "User": item.user,
       };
@@ -203,8 +284,10 @@ export default function RiwayatPenjualanPage() {
       "Nama Produk": "",
       "Jumlah": 0,
       "Satuan": "",
+      "Harga Beli Rata-rata": "",
       "Harga Jual Satuan": "TOTAL",
       "Total Harga": totalPenjualan.toLocaleString("id-ID"),
+      "Margin": totalMargin.toLocaleString("id-ID"),
       "Nama Customer": "",
       "User": "",
     } as any);
@@ -219,8 +302,10 @@ export default function RiwayatPenjualanPage() {
       { wch: 25 },
       { wch: 10 },
       { wch: 10 },
+      { wch: 22 },
       { wch: 20 },
       { wch: 20 },
+      { wch: 18 },
       { wch: 25 },
       { wch: 15 },
     ];
@@ -330,9 +415,19 @@ export default function RiwayatPenjualanPage() {
 
       {/* Total Penjualan */}
       <div className="bg-gradient-to-r from-[#1B3060] to-[#0B1424] rounded-2xl shadow-xl p-6 text-white">
-        <div className="text-sm font-semibold text-slate-300 mb-1">Total Penjualan</div>
-        <div className="text-4xl font-bold">
-          Rp {totalPenjualan.toLocaleString("id-ID")}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div>
+            <div className="text-sm font-semibold text-slate-300 mb-1">Total Penjualan</div>
+            <div className="text-3xl font-bold">
+              Rp {totalPenjualan.toLocaleString("id-ID")}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-slate-300 mb-1">Total Margin</div>
+            <div className="text-3xl font-bold">
+              Rp {totalMargin.toLocaleString("id-ID")}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -367,10 +462,16 @@ export default function RiwayatPenjualanPage() {
                     Jumlah
                   </th>
                   <th className="text-left py-4 px-4 font-bold text-[#0B1424]">
+                    Harga Beli Rata-rata
+                  </th>
+                  <th className="text-left py-4 px-4 font-bold text-[#0B1424]">
                     Harga Jual Satuan
                   </th>
                   <th className="text-left py-4 px-4 font-bold text-[#0B1424]">
                     Total Harga
+                  </th>
+                  <th className="text-left py-4 px-4 font-bold text-[#0B1424]">
+                    Margin
                   </th>
                   <th className="text-left py-4 px-4 font-bold text-[#0B1424]">
                     Customer
@@ -382,7 +483,9 @@ export default function RiwayatPenjualanPage() {
               </thead>
               <tbody className="divide-y divide-[#F1F3F8] bg-white">
                 {filteredData.map((item) => {
+                  const hargaBeli = getHargaBeliRataRata(item.namaProduk);
                   const totalHarga = (item.hargaJualSatuan || 0) * item.jumlah;
+                  const margin = getMargin(item);
                   return (
                     <tr
                       key={item.id}
@@ -398,6 +501,9 @@ export default function RiwayatPenjualanPage() {
                         {item.jumlah}{" "}
                         <span className="text-slate-500 font-semibold">{item.satuan}</span>
                       </td>
+                      <td className="py-4 px-4 text-slate-600 text-sm whitespace-nowrap">
+                        {hargaBeli > 0 ? `Rp ${hargaBeli.toLocaleString("id-ID")}` : "-"}
+                      </td>
                       <td className="py-4 px-4 text-slate-600 text-sm">
                         {typeof item.hargaJualSatuan === "number"
                           ? `Rp ${item.hargaJualSatuan.toLocaleString("id-ID")}`
@@ -405,6 +511,9 @@ export default function RiwayatPenjualanPage() {
                       </td>
                       <td className="py-4 px-4 font-bold text-[#1F7A4D] text-sm">
                         Rp {totalHarga.toLocaleString("id-ID")}
+                      </td>
+                      <td className={`py-4 px-4 font-bold text-sm whitespace-nowrap ${margin !== null && margin < 0 ? "text-[#B23A34]" : "text-[#1F7A4D]"}`}>
+                        {margin === null ? "-" : `Rp ${margin.toLocaleString("id-ID")}`}
                       </td>
                       <td className="py-4 px-4 text-slate-600 text-sm font-medium">
                         {item.tujuanCustomer || "-"}
